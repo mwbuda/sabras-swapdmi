@@ -18,6 +18,15 @@
 #
 module SwapDmi
 	
+	class SessionInfo
+		attr_reader :id, :expire
+		
+		def initialize(id, expire)
+			@id = id
+			@expire = expire
+		end
+	end
+
 	class ModelLogic
 	  
 		DefaultSessionParsing = Proc.new {|raw| SessionInfo.new(raw[:id], raw[:expire])}
@@ -80,6 +89,36 @@ module SwapDmi
 			root[keys[-1]]
 		end
 	  
+	end
+
+	#special purpose extension of ModelLogic which combines/merges logic from multiple implemenations
+	#
+	#
+	class ModelLogicMerge < ModelLogic
+
+		def initialize(id = :unnamed)
+			super.initialize(id)
+			@delegates = []
+		end
+
+		def delegateTo(*ids)
+			@delegates += ids
+			@delegates.uniq!
+			self
+		end
+
+		def delegates()
+			@delegates.dup
+		end
+
+		def define(*keys, &logic)
+			merge = self
+			mlogic = Proc.new do |*args|
+				subresults = merge.delegates.map {|delegate| ModelLogic[delegate][*keys].call(*args)}
+				logic.call(subresults)
+			end
+			super.define(*keys, mlogic)
+		end
 	end
 
 	class Model
