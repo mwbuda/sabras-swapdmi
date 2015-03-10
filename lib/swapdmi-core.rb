@@ -31,15 +31,28 @@ module SwapDmi
 	  
 		DefaultSessionParsing = Proc.new {|raw| SessionInfo.new(raw[:id], raw[:expire])}
 		
+		@@logging = Proc.new {|m| puts m}
 		@@instances = {}
 		@@defaultInstance = nil
 			
 		attr_reader :logicId
 		
+		def self.defineLogging(&logging)
+			@@loging = logging
+			Model.defineLogging(&logging)
+		end
+
 		def self.defineDefault(logicId)
 			@@defaultInstance = logicId
 		end
 		
+		def self.log(m)
+			@@logging.call(m)
+		end
+		def log(m)
+			@@logging.call(m)
+		end
+
 		def self.instance(logicId = nil)
 			instance = @@instances[logicId.nil? ? @@defaultInstance : logicId]
 			throw :undefinedModelLogic if instance.nil?
@@ -123,7 +136,19 @@ module SwapDmi
 
 	class Model
 		attr_reader :logic
-		
+
+		@@logging = Proc.new {|m| puts m}
+		def self.defineLogging(&logging)
+			@@loging = logging
+			Model.defineLogging(&logging)
+		end
+		def log(m)
+			@@logging.call(m)
+		end
+		def self.log(m)
+			@@logging.call(m)
+		end	
+
 		def initialize(logic = ModelLogic.new, sundry = {})
 			@logic = logic
 			self.initializeModel(sundry)

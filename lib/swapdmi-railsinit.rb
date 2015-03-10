@@ -23,6 +23,8 @@ class RailsInit
 	end
 
 	def invoke()
+		SwapDmi::ModelLogic.defineLogging {|message| Rails.logger.debug(message)}
+		
 		cfg = YAML.load_file( Rails.root.join('config','models.yml') )
 		cfg[Rails.env]['swapdmi.loadDomainDefinitions'].each {|domainModels| require Rails.root.join('app/models', domainModels) }
 		cfg[Rails.env]['swapdmi.loadDomainImplementations'].each {|modelImpl| require Rails.root.join('app/models', modelImpl) }
