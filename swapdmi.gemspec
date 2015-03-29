@@ -8,7 +8,7 @@ EOD
 Gem::Specification.new do |gem|
 	gem.authors = 'Sabras Soft LLC'
 	gem.name = 'swapdmi'
-	gem.version = '0.0.0'
+	gem.version = '0.1.0'
 	gem.date = Date.today.to_s
 	gem.summary = 'SwapDMI: Swap Data Model Interface.'
 	gem.description = DESC

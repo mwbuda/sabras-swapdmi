@@ -16,8 +16,37 @@
 #	the contents of this file define the overall base domain object schema and resulting API, 
 #	with appropriate implemenation agnostic behavior defined
 #
-module SwapDmi
+module SwapDmi	
+
+	#
+	# this class is used to define initializers for the framework itself,
+	# 	eg. for Rails
+	#
+	class SwapDmiInit
+
+		@@definedInits = {}		
+
+		def self.registerInitAs(key)
+			@@definedInits[key] = self
+		end
 	
+		def self.invoke(key = nil, args = {})
+			initer = self
+			unless key.nil?
+				root = args[:srcroot]
+				root = "swapdmi-init/#{key}" if root.nil?
+				Kernel.require(root)
+				initer = @@definedInits[key]
+			end
+
+			initer.new.invoke(args)
+		end
+
+		def invoke(args = {})
+			throw 'unimplemented SwapDmi initialization'
+		end
+	end
+
 	class SessionInfo
 		attr_reader :id, :expire
 		
@@ -38,7 +67,7 @@ module SwapDmi
 		attr_reader :logicId
 		
 		def self.defineLogging(&logging)
-			@@loging = logging
+			@@logging = logging
 			Model.defineLogging(&logging)
 		end
 
@@ -139,8 +168,7 @@ module SwapDmi
 
 		@@logging = Proc.new {|m| puts m}
 		def self.defineLogging(&logging)
-			@@loging = logging
-			Model.defineLogging(&logging)
+			@@logging = logging
 		end
 		def log(m)
 			@@logging.call(m)
