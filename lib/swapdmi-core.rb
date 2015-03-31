@@ -62,6 +62,7 @@ module SwapDmi
 		
 		@@logging = Proc.new {|m| puts m}
 		@@instances = {}
+		@@config = Hash.new {|h,k| h[k] = Hash.new}
 		@@defaultInstance = nil
 			
 		attr_reader :logicId
@@ -96,6 +97,13 @@ module SwapDmi
 			self.instance(nil)
 		end
 		
+		def self.config(instance = nil)
+			instance.nil? ? @@config : @@config[instance]
+		end
+		def config()
+			@@config[@logicId]
+		end
+		
 		def initialize(id = :unnamed)
 			@logicId = id
 			@@instances[@logicId] = self
@@ -119,7 +127,7 @@ module SwapDmi
 			root[keys[-1]] = logic
 			self
 		end
-		
+
 		def trackSession(session)
 			@sessionTracking.call(session)
 		end
@@ -159,7 +167,8 @@ module SwapDmi
 				subresults = merge.delegates.map {|delegate| ModelLogic[delegate][*keys].call(*args)}
 				logic.call(subresults)
 			end
-			super.define(*keys, mlogic)
+			
+			super.define(*keys, &mlogic)
 		end
 	end
 

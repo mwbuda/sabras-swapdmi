@@ -32,11 +32,19 @@ class RailsInit < SwapDmi::SwapDmiInit
 		domainDefs = [] if domainDefs.nil?
 		domainDefs.each {|domainModels| Kernel.require Rails.root.join('app/models', domainModels) }		
 
+		Rails.logger().debug('SwapDmi: load Configuration Parameters')
+		cfps = cfg['swapdmi.config']
+		unless cfps.nil? 
+		cfps.each do |instance,params|
+			next if params.nil?
+			params.each {|k,v| SwapDmi::ModelLogic.config[instance.to_sym][k.to_sym] = v}		
+		end end
+			
 		Rails.logger.debug('SwapDmi: load Logic Implementations')
 		impls = cfg['swapdmi.loadDomainImplementations']
 		impls = [] if impls.nil?
 		impls.each {|modelImpl| Kernel.require Rails.root.join('app/models', modelImpl) }
-
+			
 		defaultLogicId = cfg['swapdmi.defaultModelLogicId']
 		SwapDmi::ModelLogic.defineDefault(defaultLogicId.to_sym) unless defaultLogicId.nil?
 
