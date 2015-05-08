@@ -14,6 +14,10 @@
 #
 
 require 'swapdmi-core'
+require 'action_controller'
+
+#do this to resolve rails' stupid autoloading stuff
+RailsBaseController = ActionController::Base
 
 module SwapDmi
 	
@@ -33,8 +37,8 @@ module SwapDmi
 	end
 	
 	def self.enableRailsSessionAccess(isGlobal = true)
-		ActionController::Base.extend(SwapDmi::RailsSessionAccessExtension)
-		ActionContoller::Base.enableSwapDmiSessionAccess() if isGlobal
+		RailsBaseController.extend(SwapDmi::RailsSessionAccessExtension)
+		RailsBaseController.enableSwapDmiSessionAccess() if isGlobal
 	end
 	
 	class RailsInit < SwapDmi::SwapDmiInit
