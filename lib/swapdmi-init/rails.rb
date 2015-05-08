@@ -43,7 +43,7 @@ module SwapDmi
 		def invoke(args = {})
 			Rails.logger.debug('initializing SwapDmi')
 			
-			SwapDmi.enableRailsSessionAcess if args[:enableRailsSessionAccess]
+			SwapDmi.enableRailsSessionAccess if args[:enableRailsSessionAccess]
 			
 			xcfg = args[:cfg]
 			xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
