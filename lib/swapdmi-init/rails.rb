@@ -16,46 +16,71 @@
 require 'swapdmi-core'
 
 module SwapDmi
-class RailsInit < SwapDmi::SwapDmiInit
-	registerInitAs :rails
 	
-	def invoke(args = {})
-		Rails.logger.debug('initializing SwapDmi')
-		xcfg = args[:cfg]
-		xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
-		cfg = xcfg[Rails.env]
-
-		SwapDmi::ModelLogic.defineLogging {|message| Rails.logger.debug(message)}
-
-		Rails.logger.debug('SwapDmi: load Domain Definitions')
-		domainDefs = cfg['swapdmi.loadDomainDefinitions']
-		domainDefs = [] if domainDefs.nil?
-		domainDefs.each {|domainModels| Kernel.require Rails.root.join('app/models', domainModels) }		
-
-		Rails.logger().debug('SwapDmi: load Configuration Parameters')
-		cfps = cfg['swapdmi.config']
-		unless cfps.nil? 
-		cfps.each do |instance,params|
-			next if params.nil?
-			params.each {|k,v| SwapDmi::ModelLogic.config[instance.to_sym][k.to_sym] = v}		
-		end end
-			
-		Rails.logger.debug('SwapDmi: load Logic Implementations')
-		impls = cfg['swapdmi.loadDomainImplementations']
-		impls = [] if impls.nil?
-		impls.each {|modelImpl| Kernel.require Rails.root.join('app/models', modelImpl) }
-			
-		defaultLogicId = cfg['swapdmi.defaultModelLogicId']
-		SwapDmi::ModelLogic.defineDefault(defaultLogicId.to_sym) unless defaultLogicId.nil?
-
-		mergeDelgs = cfg['swapdmi.setMergeDelegates']
-		mergeDelgs = {} if mergeDelgs.nil?
-		mergeDelgs.each do |mk, delegates| 
-			SwapDmi::ModelLogic.instance(mk).delegateTo(*delegates)
-		end
-
-		Rails.logger.debug('done initializing SwapDmi')
+	RailsSessionTracking = Proc.new do |session|
+		railsSession = Thread.current[:railsSession]
+		railsSession[:sid] = session.id
+		railsSession[:uid] = session.uid
+		session.sundry.each {|k,v| railsSession[k.to_sym] = v}
+		session
 	end
+	
+	module RailsSessionAccessExtension
+		def enableSwapDmiSessionAccess()
+			define_method(:swapdmiExposeSession) {Thread.current[:railsSession] = session}
+			before_action :swapdmiExposeSession
+		end
+	end
+	
+	def self.enableRailsSessionAccess(isGlobal = true)
+		ActionController::Base.extend(SwapDmi::RailsSessionAccessExtension)
+		ActionContoller::Base.enableSwapDmiSessionAccess() if isGlobal
+	end
+	
+	class RailsInit < SwapDmi::SwapDmiInit
+		registerInitAs :rails
+		
+		def invoke(args = {})
+			Rails.logger.debug('initializing SwapDmi')
+			
+			SwapDmi.enableRailsSessionAcess if args[:enableRailsSessionAccess]
+			
+			xcfg = args[:cfg]
+			xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
+			cfg = xcfg[Rails.env]
+	
+			SwapDmi::ModelLogic.defineLogging {|message| Rails.logger.debug(message)}
+	
+			Rails.logger.debug('SwapDmi: load Domain Definitions')
+			domainDefs = cfg['swapdmi.loadDomainDefinitions']
+			domainDefs = [] if domainDefs.nil?
+			domainDefs.each {|domainModels| Kernel.require Rails.root.join('app/models', domainModels) }		
+	
+			Rails.logger().debug('SwapDmi: load Configuration Parameters')
+			cfps = cfg['swapdmi.config']
+			unless cfps.nil? 
+			cfps.each do |instance,params|
+				next if params.nil?
+				params.each {|k,v| SwapDmi::ModelLogic.config[instance.to_sym][k.to_sym] = v}		
+			end end
+				
+			Rails.logger.debug('SwapDmi: load Logic Implementations')
+			impls = cfg['swapdmi.loadDomainImplementations']
+			impls = [] if impls.nil?
+			impls.each {|modelImpl| Kernel.require Rails.root.join('app/models', modelImpl) }
+				
+			defaultLogicId = cfg['swapdmi.defaultModelLogicId']
+			SwapDmi::ModelLogic.defineDefault(defaultLogicId.to_sym) unless defaultLogicId.nil?
+	
+			mergeDelgs = cfg['swapdmi.setMergeDelegates']
+			mergeDelgs = {} if mergeDelgs.nil?
+			mergeDelgs.each do |mk, delegates| 
+				SwapDmi::ModelLogic.instance(mk).delegateTo(*delegates)
+			end
+	
+			Rails.logger.debug('done initializing SwapDmi')
+		end
+	end 
 
-end end
+end
 
