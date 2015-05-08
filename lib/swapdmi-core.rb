@@ -24,7 +24,7 @@ module SwapDmi
 	#
 	class SwapDmiInit
 
-		@@definedInits = {}		
+		@@definedInits = {}
 
 		def self.registerInitAs(key)
 			@@definedInits[key] = self
@@ -48,18 +48,27 @@ module SwapDmi
 	end
 
 	class SessionInfo
-		attr_reader :id, :expire
+		attr_reader :id, :uid, :expire, :sundry
 		
-		def initialize(id, expire)
+		def initialize(id, uid, expire)
 			@id = id
+			@uid = uid
 			@expire = expire
+			@sundry = []
 		end
+		
+		def withSundry(args = {})
+			@sundry.merge!(args)
+			self
+		end
+		
 	end
 
+	DefaultSessionTracking = Proc.new {|session| session}
+	DefaultSessionParsing = Proc.new {|raw| SessionInfo.new(raw[:id], raw[:uid], raw[:expire])}
+			
 	class ModelLogic
-	  
-		DefaultSessionParsing = Proc.new {|raw| SessionInfo.new(raw[:id], raw[:expire])}
-		
+
 		@@logging = Proc.new {|m| puts m}
 		@@instances = {}
 		@@config = Hash.new {|h,k| h[k] = Hash.new}
@@ -108,7 +117,8 @@ module SwapDmi
 			@logicId = id
 			@@instances[@logicId] = self
 			@logics = Hash.new {|h,k| h[k] = Hash.new(&h.default_proc)}
-			self.defineSessionParsing(&DefaultSessionParsing)
+			self.defineSessionParsing(&SwapDmi::DefaultSessionParsing)
+			self.defineSessionTracking(&SwapDmi::DefaultSessionTracking)
 		end
 		
 		def defineSessionParsing(&parsing)
@@ -117,7 +127,7 @@ module SwapDmi
 		end
 		
 		def defineSessionTracking(&tracking)
-			@sessionTracking = tracking
+			@sessionTracking = tracking.nil? ? DefaultSessionTracking : tracking
 			self
 		end
 		
@@ -127,9 +137,18 @@ module SwapDmi
 			root[keys[-1]] = logic
 			self
 		end
+		
+		def parseSession(raw)
+			@sessionParsing.call(raw)
+		end
 
 		def trackSession(session)
 			@sessionTracking.call(session)
+			session
+		end
+		
+		def parseTrackSession(raw)
+			self.trackSession(self.parseSession(raw))
 		end
 		
 		def [](*keys)
@@ -200,8 +219,8 @@ module SwapDmi
 			self.logic.config
 		end
 		
-		def extractAndTrackSession(rawData = {})
-			self.logic.trackSession(rawData[:session])
+		def extractAndTrackSession(rawSession)
+			self.logic.parseTrackSession(rawSession)
 		end
 		protected :extractAndTrackSession
 	end
