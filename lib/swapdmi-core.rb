@@ -196,6 +196,10 @@ module SwapDmi
 		end
 		protected :initializeModel
 		
+		def config()
+			self.logic.config
+		end
+		
 		def extractAndTrackSession(rawData = {})
 			self.logic.trackSession(rawData[:session])
 		end
