@@ -76,7 +76,7 @@ module SwapDmi
 			defaultLogicId = cfg['swapdmi.defaultModelLogicId']
 			SwapDmi::ModelLogic.defineDefault(defaultLogicId.to_sym) unless defaultLogicId.nil?
 	
-			mergeDelgs = cfg['swapdmi.setMergeDelegates']
+			mergeDelgs = cfg['swapdmi.mergeDelegates']
 			mergeDelgs = {} if mergeDelgs.nil?
 			mergeDelgs.each do |mk, delegates| 
 				SwapDmi::ModelLogic.instance(mk).delegateTo(*delegates)

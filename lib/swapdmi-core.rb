@@ -66,7 +66,8 @@ module SwapDmi
 
 	DefaultSessionTracking = Proc.new {|session| session}
 	DefaultSessionParsing = Proc.new {|raw| SessionInfo.new(raw[:id], raw[:uid], raw[:expire])}
-			
+	DefaultMissingLogic = Proc.new {|modelLogic,*keys| throw :undefinedModelLogic }
+		
 	class ModelLogic
 
 		@@logging = Proc.new {|m| puts m}
@@ -117,6 +118,7 @@ module SwapDmi
 			@logicId = id
 			@@instances[@logicId] = self
 			@logics = Hash.new {|h,k| h[k] = Hash.new(&h.default_proc)}
+			@missingLogic = Default
 			self.defineSessionParsing(&SwapDmi::DefaultSessionParsing)
 			self.defineSessionTracking(&SwapDmi::DefaultSessionTracking)
 		end
@@ -151,13 +153,37 @@ module SwapDmi
 			self.trackSession(self.parseSession(raw))
 		end
 		
+		def defines?(*keys)
+			root = @logics
+			keys[0..-2].each {|k| root = root[k]}
+			root.has_key?(keys[-1])
+		end
+		
+		def defineMissing(&logic)
+			@missingLogic = logic
+			self
+		end
+		
 		def [](*keys)
 			root = @logics
 			keys[0..-2].each {|k| root = root[k]}
-			throw :undefinedModelLogic unless root.has_key?(keys[-1])
+			@missingLogic.call(self,*keys) unless root.has_key?(keys[-1])
 			root[keys[-1]]
 		end
 	  
+	end
+	
+	DefaultMergeMissingLogic = Proc.new do |mlogic,*keys|
+		viable = []
+		unviable = []
+		mlogic.delegates.each do |delegate|
+			isViable = ModelLogic[delegate].defines?(*keys)
+			set = isViable ? viable : unviable
+			set << delegate
+		end
+		throw :undefinedModelLogic if viable.empty?
+		unviable.each {|delegate| mlogic.defineExcludeFor(delegate, *keys)}
+		mlogic.define(*keys)
 	end
 
 	#special purpose extension of ModelLogic which combines/merges logic from multiple implemenations
@@ -168,12 +194,28 @@ module SwapDmi
 		def initialize(id = :unnamed)
 			super.initialize(id)
 			@delegates = []
+			@filters = Hash.new do |allFilters,*keys| allFilters[*keys] = Hash.new do |actionFilters,delegate|
+				Proc.new {|*args| true}
+			end end
 		end
 
 		def delegateTo(*ids)
 			@delegates += ids
 			@delegates.uniq!
 			self
+		end
+		
+		def defineFilterFor(delegate, *keys, &logic)
+			@filters[*keys][delegate] = logic
+			self
+		end
+		
+		def defineExcludeFor(delegate, *keys)
+			self.defineFilterFor(delegate, *keys) {|*args| false}
+		end
+		
+		def defineAlwaysFor(delegate, *keys)
+			self.defineFilterFor(delegate, *keys) {|*args| true}
 		end
 
 		def delegates()
@@ -182,9 +224,22 @@ module SwapDmi
 
 		def define(*keys, &logic)
 			merge = self
+			filters = @filters[*keys]
+			xlogic = !logic.nil? ? logic : Proc.new do |subres|
+				res = []
+				subres.each {|k,vs| res += vs}
+				res
+			end 
+			
 			mlogic = Proc.new do |*args|
-				subresults = merge.delegates.map {|delegate| ModelLogic[delegate][*keys].call(*args)}
-				logic.call(subresults)
+				subresults = {}
+				mk = nil
+				merge.delegates.each do |delegate|
+					next unless filters[id].call(*args)
+					mk = delegate
+					subresults[delegate] = ModelLogic[delegate][*keys].call(*args)
+				end
+				subresults.size == 1 ? subresults[mk] : xlogic.call(subresults)
 			end
 			
 			super.define(*keys, &mlogic)
