@@ -25,7 +25,7 @@ module SwapDmi
 		railsSession = Thread.current[:railsSession]
 		railsSession[:sid] = session.id
 		railsSession[:uid] = session.uid
-		railsSession[:expire] = Time.now + session[:expire]
+		railsSession[:expire] = Time.now + session.expire
 		session.sundry.each {|k,v| railsSession[k.to_sym] = v}
 		session
 	end
