@@ -73,7 +73,7 @@ module SwapDmi
 		@@logging = Proc.new {|m| puts m}
 		@@instances = {}
 		@@config = Hash.new {|h,k| h[k] = Hash.new}
-		@@defaultInstance = nil
+		@@defaultInstance = :swapdmi_base_default_model_logicid
 			
 		attr_reader :logicId
 		
@@ -94,8 +94,9 @@ module SwapDmi
 		end
 
 		def self.instance(logicId = nil)
-			instance = @@instances[logicId.nil? ? @@defaultInstance : logicId]
-			throw :undefinedModelLogic if instance.nil?
+			cleanLogicId = logicId.nil? ? @@defaultInstance : logicId
+			instance = @@instances[cleanLogicId]
+			throw "undefinedModelLogic: #{cleanLogicId}" if instance.nil?
 			instance
 		end
 		
@@ -118,7 +119,7 @@ module SwapDmi
 			@logicId = id
 			@@instances[@logicId] = self
 			@logics = Hash.new {|h,k| h[k] = Hash.new(&h.default_proc)}
-			@missingLogic = Default
+			@missingLogic = DefaultMissingLogic
 			self.defineSessionParsing(&SwapDmi::DefaultSessionParsing)
 			self.defineSessionTracking(&SwapDmi::DefaultSessionTracking)
 		end

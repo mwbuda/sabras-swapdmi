@@ -59,6 +59,7 @@ modelLogicInstance = SwapDmi::ModelLogic.instance(:test)
 
 assertTrue(modelLogicInstance == TestModelLogic)
 
+TestDataSource.new(TestModelLogic)
 testDataSource = TestDataSource[:test]
 assertFalse(testDataSource.nil?)
 assertTrue(testDataSource.logic == TestModelLogic)
