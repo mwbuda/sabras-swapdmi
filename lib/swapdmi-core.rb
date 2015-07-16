@@ -193,7 +193,7 @@ module SwapDmi
 	class ModelLogicMerge < ModelLogic
 
 		def initialize(id = :unnamed)
-			super.initialize(id)
+			super(id)
 			@delegates = []
 			@filters = Hash.new do |allFilters,*keys| allFilters[*keys] = Hash.new do |actionFilters,delegate|
 				Proc.new {|*args| true}
