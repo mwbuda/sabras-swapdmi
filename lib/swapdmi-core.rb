@@ -195,7 +195,7 @@ module SwapDmi
 		def initialize(id = :unnamed)
 			super(id)
 			@delegates = []
-			@filters = Hash.new do |allFilters,*keys| allFilters[*keys] = Hash.new do |actionFilters,delegate|
+			@filters = Hash.new do |allFilters, keys| allFilters[keys] = Hash.new do |actionFilters,delegate|
 				Proc.new {|*args| true}
 			end end
 		end
@@ -207,7 +207,7 @@ module SwapDmi
 		end
 		
 		def defineFilterFor(delegate, *keys, &logic)
-			@filters[*keys][delegate] = logic
+			@filters[keys][delegate] = logic
 			self
 		end
 		
@@ -225,7 +225,7 @@ module SwapDmi
 
 		def define(*keys, &logic)
 			merge = self
-			filters = @filters[*keys]
+			filters = @filters[keys]
 			xlogic = !logic.nil? ? logic : Proc.new do |subres|
 				res = []
 				subres.each {|k,vs| res += vs}
