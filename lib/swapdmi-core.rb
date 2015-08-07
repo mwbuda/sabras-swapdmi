@@ -191,7 +191,7 @@ module SwapDmi
 	#
 	#
 	class ModelLogicMerge < ModelLogic
-
+		
 		def initialize(id = :unnamed)
 			super(id)
 			@delegates = []
@@ -212,11 +212,11 @@ module SwapDmi
 		end
 		
 		def defineExcludeFor(delegate, *keys)
-			self.defineFilterFor(delegate, *keys) {|*args| false}
+			self.defineFilterFor(delegate, *keys) {|dkey, *args| false}
 		end
 		
 		def defineAlwaysFor(delegate, *keys)
-			self.defineFilterFor(delegate, *keys) {|*args| true}
+			self.defineFilterFor(delegate, *keys) {|dkey, *args| true}
 		end
 
 		def delegates()
@@ -226,21 +226,15 @@ module SwapDmi
 		def define(*keys, &logic)
 			merge = self
 			filters = @filters[keys]
-			xlogic = !logic.nil? ? logic : Proc.new do |subres|
-				res = []
-				subres.each {|k,vs| res += vs}
-				res
-			end 
 			
 			mlogic = Proc.new do |*args|
 				subresults = {}
-				mk = nil
-				merge.delegates.each do |delegate|
-					next unless filters[id].call(*args)
-					mk = delegate
-					subresults[delegate] = ModelLogic[delegate][*keys].call(*args)
+				merge.delegates.each do |dkey|
+					next unless filters[dkey].call(dkey, *args)
+					dlogic = ModelLogic[dkey]
+					subresults[dkey] = dlogic[*keys].call(*args)
 				end
-				subresults.size == 1 ? subresults[mk] : xlogic.call(subresults)
+				xlogic.call(subresults)
 			end
 			
 			super.define(*keys, &mlogic)
