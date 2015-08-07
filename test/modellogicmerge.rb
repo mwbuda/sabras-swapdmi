@@ -23,8 +23,10 @@ def vcalc(k, arg, multiplier)
 	"#{k}#{arg * multiplier}".to_sym
 end
 
+puts 'create delegate model logic impls'
 Delegates = {}
 Setup.each do |key, multiplier|
+	puts "\t creating delegate #{key}"
 	mlogic = SwapDmi::ModelLogic.new(key)
 	
 	mlogic.define(:array) do |f, args|
@@ -40,30 +42,34 @@ Setup.each do |key, multiplier|
 	end
 	
 	Delegates[key] = mlogic
-	
 end
 
+puts 'create merge model logic'
 #create a merge b/w them
 Merge = SwapDmi::ModelLogicMerge.new(:merge) 
 Merge.delegateTo(Setup.keys)
 
-Setup.keys.each do |k| 
-	filter
+puts 'create filters'
+Setup.keys.each do |k|
+	puts "\t filters for #{k}" 
 	Merge.defineFilterFor(k, :array) {|dk, filter, args| filter =~ /#{dk}/} 
-	Merge.defineFilter For(k, :scalar, :one) {|dk, filter, args| filter =~ /#{dk}/}
+	Merge.defineFilterFor(k, :scalar, :one) {|dk, filter, args| filter =~ /#{dk}/}
 end
 
+puts 'define array logic'
 Merge.define(:array) do |subres|
 	res = []
 	subres.values.each {|sres| res += sres }
 	res
 end
 
+puts 'define scalar one logic'
 Merge.define(:scalar, :one) do |subres|
 	subres.values
 end
 
-merge.define(:scalar, :two) do |subres|
+puts 'define scalar two logic'
+Merge.define(:scalar, :two) do |subres|
 	subres.values
 end
 
@@ -74,11 +80,14 @@ def verifyInResults(expected, *results)
 end
 
 #test array output
-def executeTest1(filter)	
+def executeTest1(filter)
+	puts "execute test 1 #{filter}"	
 	args = [1,2,3]
 	results = SwapDmi::ModelLogic[:merge][:array].call(filter, args)
-	
+	puts "\tinvoke done"
+		
 	Setup.each do |k,multiplier|
+		puts "\tverify #{k}"
 		isFiltered = filter =~ /#{k}/
 		expecteds = args.map {|a| vcalc(k,a,multiplier) }
 		verifys = expectes.map {|e| verifyInResults(e, *results)}
@@ -94,11 +103,14 @@ end
 
 #test scalar one output
 def executeTest2(filter)
+	puts "execute test 2 #{filter}"
 	args = [1,2,3]
 	sumArg = args.reduce(:+)
 	results = SwapDmi::ModelLogic[:merge][:scalar,:one].call(filter, *args)
+	puts "\tinvoke done"
 		
 	Setup.each do |k,multiplier|
+		puts "\tverify #{k}"
 		isFiltered = filter =~ /#{k}/
 		expected = vcalc(k,args.reduce(:+),multiplier)
 		verify = verifyInResults(expected, *results)
@@ -113,10 +125,13 @@ end
 
 # test scalar two output
 def executeTest3(filter) 
+	puts "execute test 3 #{filter}"
 	args = [1,2,3]
 	results = SwapDmi::ModelLogic[:merge][:scalar,:two].call(filter, *args)
-	
+	puts "\tinvoke done"
+		
 	Setup.each do |k,multiplier|
+		puts "\t verify #{k}"
 		expected = vcalc(k,args.reduce(:+),multiplier)
 		verify = verifyInResults(expected, *results)
 		assertTrue(verify) 
