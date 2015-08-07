@@ -34,11 +34,11 @@ Setup.each do |key, multiplier|
 	end
 	
 	mlogic.define(:scalar, :one) do |f, a1,a2,a3|
-		vcalc(key,a,multiplier)
+		vcalc(key,a1+a2+a3,multiplier)
 	end
 	
 	mlogic.define(:scalar, :two) do |f, a1,a2,a3|
-		vcalc(key,a,multiplier)
+		vcalc(key,a1+a2+a3,multiplier)
 	end
 	
 	Delegates[key] = mlogic
@@ -47,7 +47,7 @@ end
 puts 'create merge model logic'
 #create a merge b/w them
 Merge = SwapDmi::ModelLogicMerge.new(:merge) 
-Merge.delegateTo(Setup.keys)
+Merge.delegateTo(*Setup.keys)
 
 puts 'create filters'
 Setup.keys.each do |k|
@@ -90,7 +90,7 @@ def executeTest1(filter)
 		puts "\tverify #{k}"
 		isFiltered = filter =~ /#{k}/
 		expecteds = args.map {|a| vcalc(k,a,multiplier) }
-		verifys = expectes.map {|e| verifyInResults(e, *results)}
+		verifys = expecteds.map {|e| verifyInResults(e, *results)}
 			
 		if isFiltered
 			assertTrue(verifys.reduce {|acc,v| acc && v}) 
@@ -131,7 +131,7 @@ def executeTest3(filter)
 	puts "\tinvoke done"
 		
 	Setup.each do |k,multiplier|
-		puts "\t verify #{k}"
+		puts "\tverify #{k}"
 		expected = vcalc(k,args.reduce(:+),multiplier)
 		verify = verifyInResults(expected, *results)
 		assertTrue(verify) 
