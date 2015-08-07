@@ -224,20 +224,20 @@ module SwapDmi
 		end
 
 		def define(*keys, &logic)
-			merge = self
+			delegates = @delegates
 			filters = @filters[keys]
 			
 			mlogic = Proc.new do |*args|
 				subresults = {}
-				merge.delegates.each do |dkey|
+				delegates.each do |dkey|
 					next unless filters[dkey].call(dkey, *args)
 					dlogic = ModelLogic[dkey]
 					subresults[dkey] = dlogic[*keys].call(*args)
 				end
-				xlogic.call(subresults)
+				logic.call(subresults)
 			end
 			
-			super.define(*keys, &mlogic)
+			super(*keys, &mlogic)
 		end
 	end
 
