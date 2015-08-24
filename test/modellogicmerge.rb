@@ -1,7 +1,7 @@
 
 
 require 'rubygems'
-require 'swapdmi-core'
+require 'swapdmi'
 
 def assertTrue(expression)
 	throw :assert unless expression

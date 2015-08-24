@@ -1,7 +1,7 @@
 
 
 require 'rubygems'
-require 'swapdmi-core'
+require 'swapdmi'
 
 def assertTrue(expression)
 	throw :assert unless expression
@@ -82,3 +82,4 @@ testModelB[:b] = 'bb'
 assertTrue(testModelB[:b] == 'bb')
 assertTrue(testModelB.values.include?(:b))		
 	
+puts 'test complete. no problems'
