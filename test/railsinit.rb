@@ -1,6 +1,9 @@
 
 require 'rubygems'
-require 'swapdmi-core'
+require 'swapdmi'
+
+#set global flag picked up by the initializer to not bring in real rails libraries
+$test = true
 
 #mock rails logger
 class Logger
@@ -11,6 +14,8 @@ class Logger
 
 end
 
+#we use this to mock up the rails root directory.
+#	for this to work, ensure that you are running the test script from the gem project's test directory
 class RailsRoot 
 
 	def join(*other)
@@ -40,6 +45,11 @@ class Rails
 	end
 end
 
+module ActionController
+class Base
+	#nothing else required, we just need it around to be extended by the initializer
+	
+end	end
 
 yaml = { 'env' => {
 	'swapdmi.loadDomainDefinitions' => [
@@ -55,5 +65,5 @@ yaml = { 'env' => {
 
 SwapDmi::SwapDmiInit.invoke(:rails, :cfg => yaml)
 
-
+puts 'test complete. no problems encountered'
 

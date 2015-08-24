@@ -13,9 +13,20 @@
 #		- 'swapdmi.setMergeDelegates': key->array hash defining ModelLogicMerge delegates
 #
 
-require 'swapdmi-core'
-require 'action_controller'
+require 'swapdmi'
+require 'swapdmi/ext/sessiontrack'
 
+#ruby on rails specific required libraries.
+#	we put this in a guard for purposes of testing the extension,
+#	since Rails does not play nice with randomly requiring in components, and we don't want a full rails stack
+#	in a unit test anyway.
+#	
+#	see applicable unit/integ tests for whatever we are currently doing to mock up rails functionality	
+#
+unless $test
+	require 'action_controller'
+end
+	
 #do this to resolve rails' stupid autoloading stuff
 RailsBaseController = ActionController::Base
 
