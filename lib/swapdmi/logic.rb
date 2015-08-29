@@ -12,71 +12,34 @@ module SwapDmi
 	
 	DefaultMissingLogic = Proc.new {|modelLogic,*keys| throw :undefinedModelLogic }
 	
-	class ModelLogic
-
-		@@logging = Proc.new {|m| puts m}
-		@@instances = {}
+	class ModelImpl
+		extend TrackClassHierarchy
+		
+		attr_reader :id
+		
 		@@config = Hash.new {|h,k| h[k] = Hash.new}
-		@@defaultInstance = :swapdmi_base_default_model_logicid
-			
-		attr_reader :logicId
-		
-		def self.defineLogging(&logging)
-			@@logging = logging
-			Model.defineLogging(&logging)
-		end
-
-		def self.defineDefault(logicId)
-			@@defaultInstance = logicId
-		end
-		
-		def self.log(m)
-			@@logging.call(m)
-		end
-		def log(m)
-			@@logging.call(m)
-		end
-
-		def self.instance(logicId = nil)
-			cleanLogicId = logicId.nil? ? @@defaultInstance : logicId
-			instance = @@instances[cleanLogicId]
-			throw "undefinedModelLogic: #{cleanLogicId}" if instance.nil?
-			instance
-		end
-		
-		def self.[](logicId)
-			self.instance(logicId)
-		end
-		
-		def self.default()
-			self.instance(nil)
-		end
 		
 		def self.config(instance = nil)
 			instance.nil? ? @@config : @@config[instance]
 		end
 		def config()
-			@@config[@logicId]
+			@@config[@id]
 		end
 		
 		def initialize(id = :unnamed)
-			@logicId = id
-			@@instances[@logicId] = self
-			@logics = Hash.new {|h,k| h[k] = Hash.new(&h.default_proc)}
+			@id = id
+			self.class.trackInstance(id,self)
+			@logics = HierarchicalIndex.new
 			@missingLogic = DefaultMissingLogic
 		end
 		
 		def define(*keys, &logic)
-			root = @logics
-			keys[0..-2].each {|k| root = root[k]}
-			root[keys[-1]] = logic
+			@logics.set(keys,logic)
 			self
 		end
 		
 		def defines?(*keys)
-			root = @logics
-			keys[0..-2].each {|k| root = root[k]}
-			root.has_key?(keys[-1])
+			@logics.has?(keys)
 		end
 		
 		def defineMissing(&logic)
@@ -85,18 +48,17 @@ module SwapDmi
 		end
 		
 		def [](*keys)
-			root = @logics
-			keys[0..-2].each {|k| root = root[k]}
-			@missingLogic.call(self,*keys) unless root.has_key?(keys[-1])
-			root[keys[-1]]
+			logic = @logics[*keys]
+			@missingLogic.call(self,*keys) if logic.nil?
+			logic
 		end
 	  
 	end
 	
-	#special purpose extension of ModelLogic which combines/merges logic from multiple implemenations
+	#special purpose extension of ModelImpl which combines/merges logic from multiple implemenations
 	#
 	#
-	class ModelLogicMerge < ModelLogic
+	class MergedModelImpl < ModelImpl
 		
 		def initialize(id = :unnamed)
 			super(id)

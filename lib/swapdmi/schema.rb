@@ -12,8 +12,66 @@
 
 module SwapDmi
 	
+	class ContextOfUse
+		extend TrackClassHierarchy
+		
+		attr_reader :id, :config
+
+		def default?()
+			(@id == :default)
+		end
+		
+		def initialize(id = :default)
+			@id = id
+			self.trackInstance(id, self)
+			@config = {}
+				
+			if self.default?
+				dcxt = self
+				@dataSources = Hash.new {|h,k| h[k] = k.new(dcxt)}
+				@impls = {:default => ModelImpl.default}
+			else
+				@impls = {}
+				@dataSources = {}
+			end
+		end
+		
+		def setImpl(k, impl)
+			@impls[k] = impl
+			self
+		end
+		
+		def defineDataSource(dsClass, sundry = {})
+			@dataSources[dsClass] = dsClass.new(self,sundry)
+			self
+		end
+		
+		def impl(k = :default)
+			@impls[k]
+		end
+		
+		def impls()
+			@impls.dup
+		end
+		
+		def dataSources()
+			res = @dataSources.dup
+		end
+		
+		def dataSource(dsClass)
+			@dataSources[dsClass]
+		end
+		
+		def [](dsClass)
+			self.dataSource(dsClass)
+		end
+		
+		self.new(:default)
+	end
+	
 	class Model
-		attr_reader :logic
+		attr_reader :contextOfUse, :id
+		alias :context :contextOfUse
 
 		@@logging = Proc.new {|m| puts m}
 		def self.defineLogging(&logging)
@@ -26,8 +84,9 @@ module SwapDmi
 			@@logging.call(m)
 		end	
 
-		def initialize(logic = ModelLogic.new, sundry = {})
-			@logic = logic
+		def initialize(id, context = ContextOfUse.default, sundry = {})
+			@contextOfUse = context
+			@id = id
 			self.initializeModel(sundry)
 		end
 		
@@ -37,53 +96,63 @@ module SwapDmi
 		protected :initializeModel
 		
 		def config()
-			self.logic.config
+			self.contextOfUse.config
+		end
+		
+		def impl(k = :default)
+			self.contextOfUse.impl(k)
 		end
 
 	end
 	
-	#this is mostly a marker interface for models
-	#	of which there is generally exactly one (singleton); 
-	#	and which serve as 'access' points for the rest of the application
-	#	
-	#	eg; ea. controller which needs access to user data will start at a shared Users model,
-	#	which is a DataSource, as opposed to building their own Profile Objects from scratch
 	#
-	#	from a top level perspective, the correct instance should be accessed via the class instance/[] methods
-	#	instances are automagically identified by the id of the underlying ModelLogic
+	# specialized Model which serves as root to access & manipulate the domain model,
+	#	in other words the starting point for an API user; the 1st component they will use to access the model
 	#
-	#	a 'default' mechanism is provided so the application can just ask for X.instance and get the right one,
-	#	configure this with defineDefaultInstance(logicId)
+	#
 	class DataSource < Model
 		
-		@@instances = Hash.new {|h,k| h[k] = Hash.new}
-		@@defaultInstance = {}
-		
-		def initialize(logic = ModelLogic.new, sundry = {})
-			@@instances[self.class][logic.logicId] = self
-			super(logic,sundry)
+		def initialize(context= ContextOfUse.default, sundry = {})
+			super(context.id,context,sundry)
+			
+			@modelInit = Hash.new do |modelTypes,modelType| 
+				modelTypes[modelType] = Proc.new {|id,cxt,dsource| Hash.new}
+			end
+			
+			dsource = self
+			context = self.contextOfUse
+			modelInit = @modelInit
+			@modelCache = Hash.new do |modelTypes,modelType|
+				modelTypes[modelType] = Hash.new do |models,id|
+					params = 
+					models[id] = modelType.new(
+						id, context, modelInit[modelType].call(id, context, dsource)
+					)
+				end
+			end
 		end
 		
-		def self.dataSourceTypes
-			@@instances.keys
+		def defineModelInit(modelType, &init)
+			@modelInit[modelType] = init
 		end
 		
-		def self.defineDefaultLogic(logicId)
-			@@defaultInstance[self] = logicId
+		def cacheModel(model)
+			@modelCache[model.class][model.id] = model
 		end
 		
-		def self.instance(logicId = nil)
-			instance = @@instances[self][ logicId.nil? ? @@defaultInstance[self] : logicId ]
-			instance = @@instances[self][ModelLogic.default.logicId] if instance.nil?
-			instance
+		def models()
+			@modelCache
 		end
 		
-		def self.[](logicId)
-			self.instance(logicId)
+		def self.[](k)
+			cxt = ContextOfUse[k]
+			return nil if cxt.nil?
+			cxt[self]
 		end
+		alias :instance :[]
 		
 		def self.default()
-			self.instance(nil)
+			self[nil]
 		end
 		
 	end
