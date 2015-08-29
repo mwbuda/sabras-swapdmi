@@ -16,6 +16,8 @@ module SwapDmi
 		extend TrackClassHierarchy
 		extend HasConfig
 		
+		defineDefaultInstance(:unnamed)
+		
 		def initialize(id = :unnamed)
 			self.assignId(id)
 			@logics = HierarchicalIndex.new
@@ -43,6 +45,8 @@ module SwapDmi
 		end
 	  
 	end
+	
+	DefaultModelImpl = SwapDmi::ModelImpl.new
 	
 	#special purpose extension of ModelImpl which combines/merges logic from multiple implemenations
 	#

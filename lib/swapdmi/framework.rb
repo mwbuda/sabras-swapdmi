@@ -14,28 +14,30 @@ module SwapDmi
 	module HasId
 		
 		def self.extends?(type)
-		 	return false unless type.responds_to?(:whenAssignIdDo)
-		 	return false unless type.instance_methods.includes?(:id)
+		 	return false unless type.respond_to?(:whenAssignIdDo)
+		 	return false unless type.instance_methods.include?(:id)
+			return false unless type.instance_methods.include?(:assignId)
 		 	true
 		end
 		
 		def self.extended(base)
 			base.class_variable_set(:@@onAssignId, [])
-			
-			base.instance_eval do
-				attr_reader :id
-				
-				def assignId(id)
-					@id = id
-					type = self.class
-					instance = self
-					type.class_variable_get(:@@onAssignId).each {|behavior| instance.instance_eval(id,&behavior) }
-				end
-			end
+			base.instance_eval { include SwapDmi::HasId::Instance }
 		end
 		
 		def whenAssignIdDo(&behavior)
 			self.class_variable_get(:@@onAssignId) << behavior
+		end
+		
+		module Instance
+			attr_reader :id
+							
+			def assignId(id)
+				@id = id
+				type = self.class
+				instance = self
+				type.class_variable_get(:@@onAssignId).each {|behavior| instance.instance_exec(id,&behavior) }
+			end
 		end
 		
 	end
@@ -48,19 +50,15 @@ module SwapDmi
 	module TrackClassHierarchy
 		
 		def self.extended(base)
-			base.extend(SwapDmi::HasId) unless SwapDmi.extends?(base)
+			base.extend(SwapDmi::HasId) unless SwapDmi::HasId.extends?(base)
+			base.instance_eval { include SwapDmi::TrackClassHierarchy::Instance }
+			
 			base.class_variable_set(:@@ixs, {})
 			base.class_variable_set(:@@masterClass, base)
 			base.class_variable_set(:@@defaultIxId, :default)
 			
 			base.whenAssignIdDo do |id| 
 				self.class.trackInstance(self.id, self)
-			end
-				
-			base.instance_eval do
-				def default?()
-					self.id == self.class.defaultId
-				end
 			end
 		end
 		
@@ -98,22 +96,30 @@ module SwapDmi
 			self.instance(nil) 
 		end
 		
+		module Instance
+			def default?()
+				self.id == self.class.defaultId
+			end
+		end
+		
 	end
 	
 	module HasConfig
 		def self.extended(base)
-			base.extend(SwapDmi::HasId) unless SwapDmi.extends?(base)
+			base.extend(SwapDmi::HasId) unless SwapDmi::HasId.extends?(base)
+			base.instance_eval { include SwapDmi::HasConfig::Instance }
 			base.class_variable_set(:@@config, Hash.new {|h,k| h[k] = Hash.new})
-			base.instance_eval do
-				def config()
-					self.class.config[self.id]
-				end	
-			end
 		end
 		
 		def config(instance = nil)
 			configData = self.class_variable_get(:@@config)
 			instance.nil? ? configData : configData[instance]
+		end
+		
+		module Instance
+			def config()
+				self.class.config[self.id]
+			end	
 		end
 	end
 	
@@ -131,8 +137,8 @@ module SwapDmi
 		
 		def get(ks)
 			root = @data
-			keys[0..-2].each {|k| root = root[k]}
-			root.has_key?(keys[-1]) ? root[keys[-1]] : nil
+			ks[0..-2].each {|k| root = root[k]}
+			root.has_key?(ks[-1]) ? root[ks[-1]] : nil
 		end
 		
 		def [](*ks)

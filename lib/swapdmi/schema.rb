@@ -12,6 +12,8 @@
 
 module SwapDmi
 	
+	#TODO: subcontext/extend-context feature,
+	#	where a Context instance will delegate to another if missing impl, config, etc
 	class ContextOfUse
 		extend TrackClassHierarchy
 		extend HasConfig
@@ -22,20 +24,27 @@ module SwapDmi
 			if self.default?
 				dcxt = self
 				@dataSources = Hash.new {|h,k| h[k] = k.new(dcxt)}
-				@impls = {:default => ModelImpl.default}
+				@impls = {:default => SwapDmi::ModelImpl.default}
 			else
 				@impls = {}
 				@dataSources = {}
 			end
 		end
 		
-		def setImpl(k, impl)
-			@impls[k] = impl
+		def setImpl(k, impl = nil)
+			ck = impl.nil? ? :default : k
+			ci = impl.nil? ? k : impl
+			@impls[ck] = ci
 			self
 		end
 		
 		def defineDataSource(dsClass, sundry = {})
-			@dataSources[dsClass] = dsClass.new(self,sundry)
+			dsClass.new(self,sundry)
+			self
+		end
+		def assignDataSource(dataSource)
+			throw :misMatchedContext if dataSource.context != self
+			@dataSources[dataSource.class] = dataSource
 			self
 		end
 		
@@ -58,26 +67,15 @@ module SwapDmi
 		def [](dsClass)
 			self.dataSource(dsClass)
 		end
-		
-		self.new(:default)
 	end
+	
+	DefaultContextOfUse = SwapDmi::ContextOfUse.new
 	
 	class Model
 		extend HasId
 		
 		attr_reader :contextOfUse
 		alias :context :contextOfUse
-
-		@@logging = Proc.new {|m| puts m}
-		def self.defineLogging(&logging)
-			@@logging = logging
-		end
-		def log(m)
-			@@logging.call(m)
-		end
-		def self.log(m)
-			@@logging.call(m)
-		end	
 
 		def initialize(id, context = ContextOfUse.default, sundry = {})
 			self.assignId(id)
@@ -107,44 +105,103 @@ module SwapDmi
 	#
 	class DataSource < Model
 		
-		def initialize(context= ContextOfUse.default, sundry = {})
-			super(context.id,context,sundry)
-			
-			@modelInit = Hash.new do |modelTypes,modelType| 
-				modelTypes[modelType] = Proc.new {|id,cxt,dsource| Hash.new}
+		#model init is used to initialize models in the cache
+		def self.initModelInit
+			return unless @modelInit.nil?
+			@modelInit = Hash.new do |initCodes,modelType| 
+				initCodes[modelType] = Proc.new {|id| Hash.new}
 			end
-			
+			self
+		end
+		def self.modelInit(modelType = nil)
+			cModelType = modelType.nil? ? self.defaultModelType : modelType
+			self.initModelInit
+			@modelInit[cModelType]
+		end
+		def self.defineModelInit(modelType = nil, &init)
+			cModelType = modelType.nil? ? self.defaultModelType : modelType
+			self.initModelInit
+			@modelInit[cModelType] = init
+			self
+		end
+		
+		#default model type establishes a base model type,
+		#	which will be used implicitly
+		def self.defineDefaultModelType(type)
+			@defaultModelType = type
+			self
+		end
+		def self.defaultModelType()
+			@defaultModelType
+		end
+		
+		#fetch resolves nil: if true will create models on demand in cache
+		#	otherwise they must be touched or cached manually
+		def self.initFetchResolvesNil()
+			@fetchResolvesNil = Hash.new {|h,k| h[k] = false} if @fetchResolvesNil.nil?
+			self
+		end
+		def self.fetchResolvesNil(modelType = nil, v = true)
+			cModelType = modelType.nil? ? self.defaultModelType : modelType
+			self.initFetchResolvesNil
+			@fetchResolvesNil[cModelType] = v
+			self
+		end
+		def self.fetchResolvesNil?(modelType = nil)
+			cModelType = modelType.nil? ? self.defaultModelType : modelType
+			self.initFetchResolvesNil
+			@fetchResolvesNil[cModelType]
+		end
+		
+		def initialize(context = SwapDmi::ContextOfUse.default, sundry = {})
+			#set up the model cache
 			dsource = self
-			context = self.contextOfUse
-			modelInit = @modelInit
 			@modelCache = Hash.new do |modelTypes,modelType|
 				modelTypes[modelType] = Hash.new do |models,id|
-					params = 
-					models[id] = modelType.new(
-						id, context, modelInit[modelType].call(id, context, dsource)
-					)
+					modelInit = dsource.class.modelInit(modelType)
+					params = dsource.instance_exec(id, &modelInit)
+					models[id] = modelType.new(id, dsource.context, params)
 				end
 			end
+			
+			#call super
+			super(context.id, context, sundry) 
+			context.assignDataSource(self)
 		end
 		
-		def defineModelInit(modelType, &init)
-			@modelInit[modelType] = init
+		# instantiates a model in the cache using the defined init logic
+		def touchModel(id, type = nil)
+			ctype = type.nil? ? self.class.defaultModelType : type
+			@modelCache[type][id]
 		end
 		
+		# manually caches a model in the cache
+		#	note that this allows you to cache a model w/ a different contextOfUse than the governing dataSource
 		def cacheModel(model)
 			@modelCache[model.class][model.id] = model
 		end
 		
-		def models()
-			@modelCache
+		# fetch a model from the cache
+		#	if you are not resolving nil for the type, then will return nil if not previously manually touched/cached
+		def fetchModel(id, type = nil)
+			ctype = type.nil? ? self.class.defaultModelType : type
+			if self.class.fetchResolvesNil?(ctype)
+				@modelCache[ctype][id]
+			elsif !@modelCache[ctype].keys.include?(id)
+				nil
+			else
+				@modelCache[ctype][id]
+			end
 		end
 		
 		def self.[](k)
-			cxt = ContextOfUse[k]
+			cxt = SwapDmi::ContextOfUse[k]
 			return nil if cxt.nil?
 			cxt[self]
 		end
-		alias :instance :[]
+		def self.instance(k)
+			self[k]
+		end
 		
 		def self.default()
 			self[nil]

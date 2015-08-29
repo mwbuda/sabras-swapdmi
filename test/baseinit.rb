@@ -11,70 +11,96 @@ def assertFalse(expression)
 	throw :assert if expression
 end
 
+TestContext = SwapDmi::ContextOfUse.new(:test)
 TestModelData = Hash.new {|h,k| h[k] = Hash.new }
 
-TestModelLogic = SwapDmi::ModelLogic.new(:test)
+TestModelImpl = SwapDmi::ModelImpl.new(:test)
+TestContext.setImpl(:default, TestModelImpl)
 
-TestModelLogic.define(:test, :data, :set) {|mid,k,v| TestModelData[mid][k] = v}
-TestModelLogic.define(:test, :data, :get) {|mid,k| TestModelData[mid][k] }
-TestModelLogic.define(:test, :data, :list) {|mid| TestModelData[mid].keys }
+puts 'check model impl'
+modelImpl = SwapDmi::ModelImpl.instance(:test)
+assertTrue(modelImpl == TestModelImpl)
+assertTrue(modelImpl == TestContext.impl)
+
+puts 'define model impl logic'
+TestModelImpl.define(:test, :data, :set) {|mid,k,v| TestModelData[mid][k] = v}
+TestModelImpl.define(:test, :data, :get) {|mid,k| TestModelData[mid][k] }
+TestModelImpl.define(:test, :data, :list) {|mid| TestModelData[mid].keys }
 	
+puts 'define schema: model'
 class TestModel < SwapDmi::Model
-	
-	attr_reader :id
+	attr_reader :dsv
 	
 	def initializeModel(sundry)
-		@id = sundry[:id]
+		@dsv = sundry[:dsv]
 	end
 	
 	def [](k)
-		self.logic[:test,:data,:get].call(@id,k)
+		self.impl[:test,:data,:get].call(self.id,k)
 	end
 	
 	def []=(k,v)
-		self.logic[:test,:data,:set].call(@id,k,v)
-		self.logic()[:test,:data,:get].call(@id,k) 
+		self.impl[:test,:data,:set].call(self.id,k,v)
+		self.impl[:test,:data,:get].call(self.id,k) 
 	end
 	
 	def values()
-		self.logic[:test,:data,:list].call(@id)
+		self.impl[:test,:data,:list].call(self.id)
 	end
 	
 end
 
+puts 'define schema: data source'
 class TestDataSource < SwapDmi::DataSource
+	defineDefaultModelType TestModel
+	fetchResolvesNil
 	
+	defineModelInit do |id| 
+		{:id => id, :dsv => self.dsv}
+	end
+	
+	attr_reader :dsv
+		
 	def initializeModel(sundry)
-		cxt = self.logic
-		@models = Hash.new {|h,k| h[k] = TestModel.new(cxt, :id => k)}
+		@dsv = sundry[:value] 
 	end
 	
 	def [](id)
-		@models[id]
+		self.fetchModel(id)
 	end
 	
 end
 
-modelLogicInstance = SwapDmi::ModelLogic.instance(:test)
-
-assertTrue(modelLogicInstance == TestModelLogic)
-
-TestDataSource.new(TestModelLogic)
+puts 'init & check data source'
+TestContext.defineDataSource(TestDataSource, :value => 123)
 testDataSource = TestDataSource[:test]
 assertFalse(testDataSource.nil?)
-assertTrue(testDataSource.logic == TestModelLogic)
+assertTrue(testDataSource.id == :test)
+assertTrue(testDataSource.context == TestContext)
+assertTrue(testDataSource.impl == TestModelImpl )
+assertTrue( testDataSource.dsv == 123)
 
+puts 'test data A'
 testModelA = testDataSource[:a]
-assertTrue(testModelA.logic == TestModelLogic)
+assertFalse(testModelA.nil?)
+assertTrue(testModelA.id == :a)
+assertTrue(testModelA.context == TestContext)
+assertTrue(testModelA.impl == TestModelImpl)
+assertTrue(testModelA.dsv == 123)
 testModelA[:a] = 'aa'
 assertTrue(testModelA[:a] == 'aa')
 assertTrue(testModelA.values.include?(:a))
 testModelA[:b] = 'ab'
 assertTrue(testModelA[:b] == 'ab')
 assertTrue(testModelA.values.include?(:b))
-	
+
+puts 'test data B'
 testModelB = testDataSource[:b]
-assertTrue(testModelB.logic == TestModelLogic)
+assertFalse(testModelB.nil?)
+assertTrue(testModelB.id == :b)
+assertTrue(testModelB.context == TestContext)
+assertTrue(testModelB.impl == TestModelImpl)
+assertTrue(testModelB.dsv == 123)
 testModelB[:a] = 'ba'
 assertTrue(testModelB[:a] == 'ba')
 assertTrue(testModelB.values.include?(:a))
