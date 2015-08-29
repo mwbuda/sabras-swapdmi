@@ -16,48 +16,53 @@ module SwapDmi
 	#	all instnaces of itself & subclasses.
 	#	mostly used to provide some form of automated lookup for instances
 	#
-	def self.track_class_hierarchy(klass)
-		klass.class_variable_set(:@@ixs, {})
-		klass.class_variable_set(:@@masterClass, klass)
-		klass.class_variable_set(:@@defaultIxId, :default)
+	module TrackClassHierarchy
 		
-		klass.instance_eval do 
-			attr_reader :id
+		attr_reader :id
+		
+		def self.extended(base)
+			base.extend(self::ClassExt)
+			base.class_variable_set(:@@ixs, {})
+			base.class_variable_set(:@@masterClass, base)
+			base.class_variable_set(:@@defaultIxId, :default)
 			
-			def self.masterclass()
-				self.class_variable_get(:@@masterClass)
+			base.instance_eval do 
+				attr_reader :id
 			end
 			
-			def self.defineDefaultInstance(id)
-				masterclass.class_variable_set(:@@defaultIxId, id.nil? ? :default : id)
-			end
-			
-			def self.allInstances()
-				self.class_variable_get(:@@ixs) 
-			end
-			
-			def self.trackInstance(id, instance)
-				cleanId = id.nil? ? :default : id
-				self.allInstances[id] = instance
-			end
-			
-			def self.instance(id = nil)
-				cleanId = id.nil? ? masterclass.class_variable_set(:@@defaultIxId, :default) : id
-				instance = self.allInstances[cleanId]
-				throw "undefined class instance from hierarchy #{masterclass}: #{cleanId}" if instance.nil?
-				instance
-			end
-			
-			def self.[](id)
-				self.instance(id) 
-			end
-			
-			def self.default()
-				self.instance(nil) 
-			end
 		end
+		
+		def masterclass()
+			self.class_variable_get(:@@masterClass)
+		end
+		
+		def defineDefaultInstance(id)
+			masterclass.class_variable_set(:@@defaultIxId, id.nil? ? :default : id)
+		end
+		
+		def allInstances()
+			self.class_variable_get(:@@ixs) 
+		end
+		
+		def trackInstance(id, instance)
+			cleanId = id.nil? ? :default : id
+			self.allInstances[id] = instance
+		end
+		
+		def instance(id = nil)
+			cleanId = id.nil? ? masterclass.class_variable_set(:@@defaultIxId, :default) : id
+			instance = self.allInstances[cleanId]
+			throw "undefined class instance from hierarchy #{masterclass}: #{cleanId}" if instance.nil?
+			instance
+		end
+		alias :[] :instance
+		
+		def default()
+			self.instance(nil) 
+		end
+		
 	end
-
+	
 	class HierarchicalIndex
 		
 		def initialize()
