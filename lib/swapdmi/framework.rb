@@ -11,6 +11,35 @@
 
 module SwapDmi
 
+	module HasId
+		
+		def self.extends?(type)
+		 	return false unless type.responds_to?(:whenAssignIdDo)
+		 	return false unless type.instance_methods.includes?(:id)
+		 	true
+		end
+		
+		def self.extended(base)
+			base.class_variable_set(:@@onAssignId, [])
+			
+			base.instance_eval do
+				attr_reader :id
+				
+				def assignId(id)
+					@id = id
+					type = self.class
+					instance = self
+					type.class_variable_get(:@@onAssignId).each {|behavior| instance.instance_eval(id,&behavior) }
+				end
+			end
+		end
+		
+		def whenAssignIdDo(&behavior)
+			self.class_variable_get(:@@onAssignId) << behavior
+		end
+		
+	end
+	
 	#
 	# used to create class hierarchies where the root parent tracks
 	#	all instnaces of itself & subclasses.
@@ -18,18 +47,21 @@ module SwapDmi
 	#
 	module TrackClassHierarchy
 		
-		attr_reader :id
-		
 		def self.extended(base)
-			base.extend(self::ClassExt)
+			base.extend(SwapDmi::HasId) unless SwapDmi.extends?(base)
 			base.class_variable_set(:@@ixs, {})
 			base.class_variable_set(:@@masterClass, base)
 			base.class_variable_set(:@@defaultIxId, :default)
 			
-			base.instance_eval do 
-				attr_reader :id
+			base.whenAssignIdDo do |id| 
+				self.class.trackInstance(self.id, self)
 			end
-			
+				
+			base.instance_eval do
+				def default?()
+					self.id == self.class.defaultId
+				end
+			end
 		end
 		
 		def masterclass()
@@ -37,7 +69,12 @@ module SwapDmi
 		end
 		
 		def defineDefaultInstance(id)
-			masterclass.class_variable_set(:@@defaultIxId, id.nil? ? :default : id)
+			cid = id.nil? ? :default : id
+			masterclass.class_variable_set(:@@defaultIxId, cid)
+		end
+		
+		def defaultId()
+			masterclass.class_variable_get(:@@defaultIxId)
 		end
 		
 		def allInstances()
@@ -50,7 +87,7 @@ module SwapDmi
 		end
 		
 		def instance(id = nil)
-			cleanId = id.nil? ? masterclass.class_variable_set(:@@defaultIxId, :default) : id
+			cleanId = id.nil? ? self.defaultId : id
 			instance = self.allInstances[cleanId]
 			throw "undefined class instance from hierarchy #{masterclass}: #{cleanId}" if instance.nil?
 			instance
@@ -61,6 +98,23 @@ module SwapDmi
 			self.instance(nil) 
 		end
 		
+	end
+	
+	module HasConfig
+		def self.extended(base)
+			base.extend(SwapDmi::HasId) unless SwapDmi.extends?(base)
+			base.class_variable_set(:@@config, Hash.new {|h,k| h[k] = Hash.new})
+			base.instance_eval do
+				def config()
+					self.class.config[self.id]
+				end	
+			end
+		end
+		
+		def config(instance = nil)
+			configData = self.class_variable_get(:@@config)
+			instance.nil? ? configData : configData[instance]
+		end
 	end
 	
 	class HierarchicalIndex

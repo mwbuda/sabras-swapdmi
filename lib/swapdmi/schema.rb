@@ -14,17 +14,10 @@ module SwapDmi
 	
 	class ContextOfUse
 		extend TrackClassHierarchy
-		
-		attr_reader :id, :config
-
-		def default?()
-			(@id == :default)
-		end
+		extend HasConfig
 		
 		def initialize(id = :default)
-			@id = id
-			self.trackInstance(id, self)
-			@config = {}
+			self.assignId(id)
 				
 			if self.default?
 				dcxt = self
@@ -70,7 +63,9 @@ module SwapDmi
 	end
 	
 	class Model
-		attr_reader :contextOfUse, :id
+		extend HasId
+		
+		attr_reader :contextOfUse
 		alias :context :contextOfUse
 
 		@@logging = Proc.new {|m| puts m}
@@ -85,8 +80,8 @@ module SwapDmi
 		end	
 
 		def initialize(id, context = ContextOfUse.default, sundry = {})
+			self.assignId(id)
 			@contextOfUse = context
-			@id = id
 			self.initializeModel(sundry)
 		end
 		

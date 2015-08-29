@@ -14,13 +14,23 @@ module SwapDmi
 	# 	eg. for Rails
 	#
 	class SwapDmiInit
-
+		extend HasConfig
+		
 		@@definedInits = {}
 
 		def self.registerInitAs(key)
 			@@definedInits[key] = self
+			@id = key
+		end
+		
+		def self.id()
+			@id
 		end
 	
+		def initialize()
+			self.assignId(self.class.id)
+		end
+		
 		def self.invoke(key = nil, args = {})
 			initer = self
 			unless key.nil?
@@ -30,9 +40,9 @@ module SwapDmi
 				initer = @@definedInits[key]
 			end
 
-			initer.new.invoke(args)
+			initer.new(key).invoke(args)
 		end
-
+		
 		def invoke(args = {})
 			throw 'unimplemented SwapDmi initialization'
 		end

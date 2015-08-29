@@ -14,21 +14,10 @@ module SwapDmi
 	
 	class ModelImpl
 		extend TrackClassHierarchy
-		
-		attr_reader :id
-		
-		@@config = Hash.new {|h,k| h[k] = Hash.new}
-		
-		def self.config(instance = nil)
-			instance.nil? ? @@config : @@config[instance]
-		end
-		def config()
-			@@config[@id]
-		end
+		extend HasConfig
 		
 		def initialize(id = :unnamed)
-			@id = id
-			self.class.trackInstance(id,self)
+			self.assignId(id)
 			@logics = HierarchicalIndex.new
 			@missingLogic = DefaultMissingLogic
 		end
