@@ -92,7 +92,7 @@ module SwapDmi
 				subresults = {}
 				delegates.each do |dkey|
 					next unless filters[dkey].call(dkey, *args)
-					dlogic = ModelLogic[dkey]
+					dlogic = SwapDmi::ModelImpl[dkey]
 					subresults[dkey] = dlogic[*keys].call(*args)
 				end
 				logic.call(subresults)

@@ -27,7 +27,7 @@ puts 'create delegate model logic impls'
 Delegates = {}
 Setup.each do |key, multiplier|
 	puts "\t creating delegate #{key}"
-	mlogic = SwapDmi::ModelLogic.new(key)
+	mlogic = SwapDmi::ModelImpl.new(key)
 	
 	mlogic.define(:array) do |f, args|
 		args.map {|a| vcalc(key,a,multiplier) }
@@ -46,7 +46,7 @@ end
 
 puts 'create merge model logic'
 #create a merge b/w them
-Merge = SwapDmi::ModelLogicMerge.new(:merge) 
+Merge = SwapDmi::MergedModelImpl.new(:merge) 
 Merge.delegateTo(*Setup.keys)
 
 puts 'create filters'
@@ -83,7 +83,7 @@ end
 def executeTest1(filter)
 	puts "execute test 1 #{filter}"	
 	args = [1,2,3]
-	results = SwapDmi::ModelLogic[:merge][:array].call(filter, args)
+	results = SwapDmi::ModelImpl[:merge][:array].call(filter, args)
 	puts "\tinvoke done"
 		
 	Setup.each do |k,multiplier|
@@ -106,7 +106,7 @@ def executeTest2(filter)
 	puts "execute test 2 #{filter}"
 	args = [1,2,3]
 	sumArg = args.reduce(:+)
-	results = SwapDmi::ModelLogic[:merge][:scalar,:one].call(filter, *args)
+	results = SwapDmi::ModelImpl[:merge][:scalar,:one].call(filter, *args)
 	puts "\tinvoke done"
 		
 	Setup.each do |k,multiplier|
@@ -127,7 +127,7 @@ end
 def executeTest3(filter) 
 	puts "execute test 3 #{filter}"
 	args = [1,2,3]
-	results = SwapDmi::ModelLogic[:merge][:scalar,:two].call(filter, *args)
+	results = SwapDmi::ModelImpl[:merge][:scalar,:two].call(filter, *args)
 	puts "\tinvoke done"
 		
 	Setup.each do |k,multiplier|
