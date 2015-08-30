@@ -26,6 +26,15 @@ puts 'define model impl logic'
 TestModelImpl.define(:test, :data, :set) {|mid,k,v| TestModelData[mid][k] = v}
 TestModelImpl.define(:test, :data, :get) {|mid,k| TestModelData[mid][k] }
 TestModelImpl.define(:test, :data, :list) {|mid| TestModelData[mid].keys }
+
+TestModelImpl.define(:test, :checkScope) do |*args|
+	check = (self == TestModelImpl)
+	"model scope check => #{check} : #{args.join(',')}"
+end
+puts '1st model scope check'
+puts TestModelImpl[:test, :checkScope].call(1,2,3)
+
+
 	
 puts 'define schema: model'
 class TestModel < SwapDmi::Model
@@ -79,6 +88,9 @@ assertTrue(testDataSource.id == :test)
 assertTrue(testDataSource.context == TestContext)
 assertTrue(testDataSource.impl == TestModelImpl )
 assertTrue( testDataSource.dsv == 123)
+
+puts '2nd model scope check'
+puts testDataSource.impl()[:test, :checkScope].call(4,5,6)
 
 puts 'test data A'
 testModelA = testDataSource[:a]

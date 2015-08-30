@@ -25,7 +25,9 @@ module SwapDmi
 		end
 		
 		def define(*keys, &logic)
-			@logics.set(keys,logic)
+			recv = self
+			xlogic = Proc.new {|*args| recv.instance_exec(*args,&logic) }
+			@logics.set(keys,xlogic)
 			self
 		end
 		
@@ -88,6 +90,7 @@ module SwapDmi
 			delegates = @delegates
 			filters = @filters[keys]
 			
+			recv = self
 			mlogic = Proc.new do |*args|
 				subresults = {}
 				delegates.each do |dkey|
@@ -95,7 +98,7 @@ module SwapDmi
 					dlogic = SwapDmi::ModelImpl[dkey]
 					subresults[dkey] = dlogic[*keys].call(*args)
 				end
-				logic.call(subresults)
+				recv.instance_exec(subresults,&logic)
 			end
 			
 			super(*keys, &mlogic)

@@ -41,6 +41,10 @@ Setup.each do |key, multiplier|
 		vcalc(key,a1+a2+a3,multiplier)
 	end
 	
+	mlogic.define(:checkId) do
+		self.id
+	end
+	
 	Delegates[key] = mlogic
 end
 
@@ -71,6 +75,11 @@ end
 puts 'define scalar two logic'
 Merge.define(:scalar, :two) do |subres|
 	subres.values
+end
+
+puts 'define check id logic'
+Merge.define(:checkId) do |subres|
+	"#{self.id}(#{subres.keys.sort.join(',')})"
 end
 
 #execute the model logic and ensure proper results
@@ -138,6 +147,12 @@ def executeTest3(filter)
 	end
 end
 
+def executeCheckIdTest()
+	puts 'execute check id/scope test'
+	res = SwapDmi::ModelImpl[:merge][:checkId].call()
+	assertTrue(res == 'merge(a,b,c)')
+end
+
 executeTest1("abc")
 executeTest1("ab")
 executeTest1("a")
@@ -149,4 +164,8 @@ executeTest2("a")
 executeTest3("abc")
 executeTest3("ab")
 executeTest3("a")
+
+executeCheckIdTest()
+puts 'all tests pass, complete'
+
 
