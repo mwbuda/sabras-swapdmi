@@ -4,6 +4,12 @@ require 'swapdmi'
 require 'swapdmi/ext/logging'
 
 #
+# check module inclusion
+#
+puts 'checking extension has loaded'
+throw :assertExtension unless SwapDmi.hasExtensions?(:logging)
+
+#
 # asserts & stuff
 #
 def assertContains(label, level, sym, list)

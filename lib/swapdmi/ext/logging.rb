@@ -6,6 +6,7 @@
 #
 #
 module SwapDmi
+	SwapDmi.declareExtension(:logging) 
 	
 	DefaultLogging = Proc.new {|level, m| puts "#{level}: #{m}"}
 	
@@ -84,4 +85,10 @@ module SwapDmi
 		end
 	end
 
+	if SwapDmi.hasExtensions?(:sessiontrack)
+		class SessionTracking
+			extend HasLog
+		end
+	end
+	
 end
