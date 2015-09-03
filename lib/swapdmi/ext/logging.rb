@@ -1,14 +1,20 @@
 
 #
 # add logging capability
-# 
 #
+# This extension integrates with the base session handling extension, if that extension is present.
+#	SessionHandling instances will have logging
+#
+# logging is seemlessly supported at model, datasource, context, and impl levels
+#	thru a simple log method, wh/ takes a level and a message argument
+# 
+# the default configuration simply prints to console.
 #
 #
 module SwapDmi
 	SwapDmi.declareExtension(:logging) 
 	
-	DefaultLogging = Proc.new {|level, m| puts "#{level}: #{m}"}
+	DefaultLogging = Proc.new {|level, m| puts "SwapDMI #{level}: #{m}"}
 	
 	class Logger
 		extend TrackClassHierarchy
@@ -87,7 +93,7 @@ module SwapDmi
 		end
 	end
 
-	if SwapDmi.hasExtensions?(:sessiontrack)
+	if SwapDmi.hasExtensions?(:sessionhandle)
 		class SessionHandling
 			extend HasLog
 		end
