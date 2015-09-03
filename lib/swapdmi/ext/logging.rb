@@ -14,8 +14,7 @@ module SwapDmi
 		extend TrackClassHierarchy
 		
 		def initialize(id,&behavior)
-			@id = id
-			self.class.trackInstance(id,self)
+			assignId(id)
 			@func = behavior
 		end
 		
@@ -31,7 +30,7 @@ module SwapDmi
 		
 		def self.extended(base)
 			logTable = Hash.new do |instances,id|
-				instances[id] = nil
+				instances[id] = :default
 			end
 			base.class_variable_set(:@@logging, logTable)
 			base.instance_eval { include SwapDmi::HasLog::Instance }
@@ -43,6 +42,7 @@ module SwapDmi
 		
 		def defineLogger(id, logid)
 			self.logging[id] = logid
+			self
 		end
 		
 		def logger(id)
@@ -53,6 +53,7 @@ module SwapDmi
 		module Instance
 			def defineLogger(logid)
 				self.class.logging[self.id] = logid
+				self
 			end
 			
 			def logger()
@@ -62,6 +63,7 @@ module SwapDmi
 			
 			def log(level,m)
 				self.logger.log(level,m)
+				self
 			end
 		end
 		
@@ -86,7 +88,7 @@ module SwapDmi
 	end
 
 	if SwapDmi.hasExtensions?(:sessiontrack)
-		class SessionTracking
+		class SessionHandling
 			extend HasLog
 		end
 	end
