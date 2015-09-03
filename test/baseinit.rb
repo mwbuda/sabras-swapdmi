@@ -74,10 +74,6 @@ class TestDataSource < SwapDmi::DataSource
 		@dsv = sundry[:value] 
 	end
 	
-	def [](id)
-		self.fetchModel(id)
-	end
-	
 end
 
 puts 'init & check data source'

@@ -194,6 +194,10 @@ module SwapDmi
 			end
 		end
 		
+		def [](id, type = nil)
+			self.fetchModel(id,type)
+		end
+		
 		def self.[](k)
 			cxt = SwapDmi::ContextOfUse[k]
 			return nil if cxt.nil?
