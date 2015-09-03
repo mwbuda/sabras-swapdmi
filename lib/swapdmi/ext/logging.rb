@@ -19,7 +19,7 @@ module SwapDmi
 		end
 		
 		def log(level,m)
-			@behavior.call(level,m)
+			@func.call(level,m)
 		end
 		
 	end
@@ -33,29 +33,35 @@ module SwapDmi
 				instances[id] = nil
 			end
 			base.class_variable_set(:@@logging, logTable)
-			
-			base.instance_eval do
-				def self.logging()
-					self.class_variable_get(:@@logging)
-				end
-				
-				def self.defineLogger(id, logid)
-					self.logging[id] = logid
-				end
-			end
+			base.instance_eval { include SwapDmi::HasLog::Instance }
 		end
 		
-		def defineLogger(logid)
-			self.class.logging[self.id] = logid
+		def logging()
+			self.class_variable_get(:@@logging)
 		end
 		
-		def logger()
-			logid = self.class.logging[self.id]
+		def defineLogger(id, logid)
+			self.logging[id] = logid
+		end
+		
+		def logger(id)
+			logid = self.logging[id]
 			SwapDmi::Logger[logid]
 		end
 		
-		def log(level,m)
-			self.logger.log(level,m)
+		module Instance
+			def defineLogger(logid)
+				self.class.logging[self.id] = logid
+			end
+			
+			def logger()
+				logid = self.class.logging[self.id]
+				SwapDmi::Logger[logid]
+			end
+			
+			def log(level,m)
+				self.logger.log(level,m)
+			end
 		end
 		
 	end
