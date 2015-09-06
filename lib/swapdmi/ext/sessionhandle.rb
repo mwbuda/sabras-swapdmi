@@ -27,7 +27,7 @@ module SwapDmi
 			@id = id
 			@uid = uid
 			@expire = expire
-			@sundry = []
+			@sundry = {}
 		end
 		
 		def withSundry(args = {})
@@ -58,8 +58,8 @@ module SwapDmi
 	
 	DefaultSessionTracking = Proc.new do |session|
 		old = SwapDmi::DefaultSessionStore[:uid][session.uid]
-		SwapDmi::DefaultSessionStore[:sid].delete(old.id)
-		SwapDmi::DefaultSessionStore[:uid][uid] = session
+		SwapDmi::DefaultSessionStore[:sid].delete(old.id) unless old.nil?
+		SwapDmi::DefaultSessionStore[:uid][session.uid] = session
 		SwapDmi::DefaultSessionStore[:sid][session.id] = session
 		session
 	end
@@ -82,6 +82,9 @@ module SwapDmi
 			@userFetch = SwapDmi::DefaultSessionFetchForUser if @userFetch.nil?
 			@userFetch.call(uid, sundry)
 		end
+		def hasForUser?(uid, sundry = {})
+			fetchForUser(uid,sundry).nil? ? false : true
+		end
 		
 		def defineFetch(&fetch)
 			@idFetch = fetch.nil? ? SwapDmi::DefaultSessionFetchById : fetch
@@ -90,6 +93,9 @@ module SwapDmi
 		def fetch(sid)
 			@idFetch = SwapDmi::DefaultSessionFetchById if @idFetch.nil?
 			@idFetch.call(sid)
+		end
+		def has?(sid)
+			fetch(sid).nil? ? false : true
 		end
 		
 		def canSearch?()
@@ -123,7 +129,7 @@ module SwapDmi
 		end
 		
 		def parseTrack(raw)
-			self.trackSession(self.parseSession(raw))
+			self.track(self.parse(raw))
 		end
 	end
 		
@@ -132,7 +138,7 @@ module SwapDmi
 	module HasSessionHandling
 		
 		def self.extended(base)
-			handlerTable = Hash.new do |instances[id]|
+			handlerTable = Hash.new do |instances,id|
 				instances[id] = :default
 				
 			end
@@ -156,7 +162,7 @@ module SwapDmi
 		
 		module Instance
 			
-			def defineSessionHandler(shid)
+			def defineSessionHandling(shid)
 				self.class.allSessionHandling[self.id] = shid
 				self
 			end
@@ -165,8 +171,6 @@ module SwapDmi
 				shid = self.class.allSessionHandling[self.id]
 				SwapDmi::SessionHandling[shid]
 			end
-	
-			protected :sessionHandling
 		end
 		
 	end
