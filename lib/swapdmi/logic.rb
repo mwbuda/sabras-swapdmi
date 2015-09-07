@@ -12,6 +12,7 @@ module SwapDmi
 	
 	DefaultMissingLogic = Proc.new {|modelLogic,*keys| throw :undefinedModelLogic }
 	
+	#TODO: error handling
 	class ModelImpl
 		extend TrackClassHierarchy
 		extend HasConfig
