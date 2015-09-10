@@ -96,6 +96,16 @@ module SwapDmi
 			self.instance(nil) 
 		end
 		
+		def hasInstance?(id = nil)
+			cleanId = id.nil? ? self.defaultId : id
+			instance = self.allInstances[cleanId]
+			!instance.nil?
+		end
+		
+		def hasDefault?()
+			self.hasInstance?(nil)
+		end
+		
 		module Instance
 			def default?()
 				self.id == self.class.defaultId
