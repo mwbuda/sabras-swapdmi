@@ -21,13 +21,14 @@ module SwapDmi
 	SwapDmi.declareExtension(:sessionhandle) 
 	
 	class SessionInfo
-		attr_reader :id, :uid, :expire, :sundry
+		attr_reader :id, :uid, :expire, :sundry, :startTime
 		
 		def initialize(id, uid, expire)
 			@id = id
 			@uid = uid
 			@expire = expire
 			@sundry = {}
+			@startTime = Time.now
 		end
 		
 		def withSundry(args = {})
@@ -35,6 +36,18 @@ module SwapDmi
 			self
 		end
 		
+		def withStartTime(start)
+			@startTime = start 
+			self
+		end
+		
+		def expireTime()
+			self.expire.nil? ? nil : self.startTime + self.expire
+		end
+		
+		def willExpire?()
+			!self.expire.nil?
+		end
 	end
 	
 	DefaultSessionStore = {
@@ -71,31 +84,43 @@ module SwapDmi
 		
 		def initialize(id)
 			assignId(id)
+			self.defineFetch(&SwapDmi::DefaultSessionFetchById) 
+			self.defineFetchForUser(&SwapDmi::DefaultSessionFetchForUser) 
+			self.defineParsing(&SwapDmi::DefaultSessionParsing)
+			self.defineTracking(&SwapDmi::DefaultSessionTracking)
 		end
 		
 		def defineFetchForUser(&fetch)
-			@userFetch = fetch.nil? ? SwapDmi::DefaultSessionFetchForUser : fetch
 			@userFetch = fetch
 			self
 		end
 		def fetchForUser(uid, sundry = {})
-			@userFetch = SwapDmi::DefaultSessionFetchForUser if @userFetch.nil?
-			@userFetch.call(uid, sundry)
+			@userFetch.nil? ? nil : @userFetch.call(uid, sundry)
 		end
 		def hasForUser?(uid, sundry = {})
 			fetchForUser(uid,sundry).nil? ? false : true
 		end
 		
 		def defineFetch(&fetch)
-			@idFetch = fetch.nil? ? SwapDmi::DefaultSessionFetchById : fetch
+			@idFetch = fetch
 			self
 		end
 		def fetch(sid)
-			@idFetch = SwapDmi::DefaultSessionFetchById if @idFetch.nil?
-			@idFetch.call(sid)
+			@idFetch.nil? ? nil : @idFetch.call(sid)
 		end
 		def has?(sid)
 			fetch(sid).nil? ? false : true
+		end
+		
+		def defineFetchCurrent(&fetch)
+			@currFetch = fetch
+			self
+		end
+		def fetchCurrent()
+			@currFetch.nil? ? nil : @currFetch.call
+		end
+		def hasCurrent?()
+			fetchCurrent.nil? ? false : true
 		end
 		
 		def canSearch?()
@@ -106,7 +131,7 @@ module SwapDmi
 			self
 		end
 		def search(criteria = {})
-			@search.call(criteria)
+			@search.nil? ? nil : @search.call(criteria)
 		end
 		
 		def defineParsing(&parse)
