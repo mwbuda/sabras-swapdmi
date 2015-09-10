@@ -18,6 +18,9 @@ module SwapDmi
 		extend TrackClassHierarchy
 		extend HasConfig
 		
+		DefaultContextId = :default 
+		DefaultImplId = :default
+		
 		def initialize(id = :default)
 			self.assignId(id)
 				
@@ -31,9 +34,9 @@ module SwapDmi
 			end
 		end
 		
-		def setImpl(k, impl = nil)
-			ck = impl.nil? ? :default : k
-			ci = impl.nil? ? k : impl
+		def setImpl(k, implk)
+			ck = implk.nil? ? :default : k
+			ci = implk.nil? ? k : implk
 			@impls[ck] = ci
 			self
 		end
@@ -49,11 +52,13 @@ module SwapDmi
 		end
 		
 		def impl(k = :default)
-			@impls[k]
+			SwapDmi::ModelImpl[ @impls[k] ]
 		end
 		
 		def impls()
-			@impls.dup
+			res = {}
+			@impls.each {|k,ik| res[k] = SwapDmi::ModelImpl[ik] }
+			res
 		end
 		
 		def dataSources()
