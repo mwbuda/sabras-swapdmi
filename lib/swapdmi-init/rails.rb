@@ -14,7 +14,8 @@
 #
 
 require 'swapdmi'
-require 'swapdmi/ext/sessiontrack'
+require 'swapdmi/ext/sessionhandle'
+require 'swapdmi/ext/logging'
 
 #ruby on rails specific required libraries.
 #	we put this in a guard for purposes of testing the extension,
@@ -32,15 +33,79 @@ RailsBaseController = ActionController::Base
 
 module SwapDmi
 	
-	RailsSessionTracking = Proc.new do |session|
+	#swapDmi logger wh/ will integrate with rails logger
+	RailsLogger = SwapDmi::Logger.new(:rails) do |level,m|
+		clevel = level.to_s.downcase.to_sym
+		case level
+			when :debug then Rails.logger.debug(m)
+			when :info then Rails.logger.info(m)
+			when :warn then Rails.logger.warn(m)
+			when :error then Rails.logger.error(m)
+			when :fatal then Rails.logger.fatal(m)
+			when :unknown then Rails.logger.unknown(m)
+		end
+	end
+	
+	#extend SessionInfo for de/serializing to/from Rails Session objects
+	class SessionInfo
+		def self.fromRails(railsSession)
+			return nil if railsSession.nil?
+					
+			start = railsSession[:start]
+			expire = railsSession[:expire]
+			sid = railsSession[:sid]
+			uid = railsSession[:uid]
+			
+			have = [start,sid,uid].reduce(false) {|acc,x| acc or x.nil?}	
+			return nil unless have
+			
+			cexpire = expire.nil? ? nil : expire - start
+				
+			sundry = {}
+			railsSession.keys.each do |k|
+				ksym = k.to_sym
+				next if [:start,:expire,:sid,:uid].include?(ksym)
+				sundry[ksym] = railsSession[ksym]
+			end
+			
+			SwapDmi::SessionInfo.new(
+				railsSession[:sid], railsSession[:uid], cexpire
+			).withSundry(sundry).withStartTime(Time.at(start))	
+		end
+		
+		def updateRailsSession(railsSession)
+			return false if rails.nil?
+			railsSession[:sid] = self.id
+			railsSession[:uid] = self.uid
+			railsSession[:start] = self.startTime
+			railsSession[:expire] = self.expireTime.to_i if self.willExpire?
+			self.sundry.each {|k,v| railsSession[k.to_sym] = v}
+			true
+		end
+	end
+	
+	#define a SessionHandling wh/ will integrate with Rails
+	RailsSessionHandling = SwapDmi::SessionHandling.new(:rails)
+	
+	RailsSessionHandling.defineFetchForUser(&nil)
+	RailsSessionHandling.defineFetch(&nil)
+	
+	RailsSessionHandling.defineFetchCurrent do 
 		railsSession = Thread.current[:railsSession]
-		railsSession[:sid] = session.id
-		railsSession[:uid] = session.uid
-		railsSession[:expire] = (Time.now + session.expire).to_i
-		session.sundry.each {|k,v| railsSession[k.to_sym] = v}
+		session = SwapDmi::SessionInfo.fromRails(railsSession)
+		Thread.current[:swapdmiSession] = session unless session.nil?
 		session
 	end
 	
+	RailsSessionHandling.defineTracking do |session|
+		railsSession = Thread.current[:railsSession]
+		session.updateRails(railsSession)
+		Thread.current[:swapdmiSession] = session unless railsSession.nil?		
+		railsSession.nil? ? nil : session
+	end
+	
+	#need to module-extend BaseController to capture session where we can get at it
+	#	(thread local variable)
 	module RailsSessionAccessExtension
 		def enableSwapDmiSessionAccess()
 			define_method(:swapdmiExposeSession) {Thread.current[:railsSession] = session}
@@ -56,45 +121,82 @@ module SwapDmi
 	class RailsInit < SwapDmi::SwapDmiInit
 		registerInitAs :rails
 		
+		def defaultArgs()
+			{
+				:enableRailsSessionAccess => true
+			}
+		end
+		
 		def invoke(args = {})
 			Rails.logger.debug('initializing SwapDmi')
 			
-			SwapDmi.enableRailsSessionAccess if args[:enableRailsSessionAccess]
-			
+			if args[:enableRailsSessionAccess]
+				SwapDmi.enableRailsSessionAccess
+				SwapDmi::SessionHandling.defineDefaultInstance(:rails)
+			end
+
+			SwapDmi::Logger.defineDefaultInstance(:rails)			
+				
 			xcfg = args[:cfg]
 			xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
 			cfg = xcfg[Rails.env]
 	
-			SwapDmi::ModelLogic.defineLogging {|message| Rails.logger.debug(message)}
-	
-			Rails.logger.debug('SwapDmi: load Domain Definitions')
-			domainDefs = cfg['swapdmi.loadDomainDefinitions']
-			domainDefs = [] if domainDefs.nil?
-			domainDefs.each {|domainModels| Kernel.require Rails.root.join('app/models', domainModels) }		
-	
-			Rails.logger().debug('SwapDmi: load Configuration Parameters')
-			cfps = cfg['swapdmi.config']
-			unless cfps.nil? 
-			cfps.each do |instance,params|
-				next if params.nil?
-				params.each {|k,v| SwapDmi::ModelLogic.config[instance.to_sym][k.to_sym] = v}		
-			end end
-				
-			Rails.logger.debug('SwapDmi: load Logic Implementations')
-			impls = cfg['swapdmi.loadDomainImplementations']
-			impls = [] if impls.nil?
-			impls.each {|modelImpl| Kernel.require Rails.root.join('app/models', modelImpl) }
-				
-			defaultLogicId = cfg['swapdmi.defaultModelLogicId']
-			SwapDmi::ModelLogic.defineDefault(defaultLogicId.to_sym) unless defaultLogicId.nil?
-	
-			mergeDelgs = cfg['swapdmi.mergeDelegates']
-			mergeDelgs = {} if mergeDelgs.nil?
-			mergeDelgs.each do |mk, delegates| 
-				SwapDmi::ModelLogic.instance(mk).delegateTo(*delegates)
-			end
-	
+			loadConfig(SwapDmi::ContextOfUse, 'schema', cfg)
+			loadConfig(SwapDmi::ModelImpl, 'impl', cfg)
+			loadFiles(cfg)
+			loadMergeDelegate(cfg)
+			loadBindImpls(cfg)
+			
 			Rails.logger.debug('done initializing SwapDmi')
+		end
+		
+		def loadFiles(cfg)
+			Rails.logger.debug('SwapDmi: load Model Files')
+			paths = cfg['swapdmi.files'].nil? ? [] : cfg['swapdmi.files']
+			paths.each do |path|
+				Rails.logger.debug("SwapDmi:\t--> app/models/#{path}") 
+				Kernel.require Rails.root.join('app/models', path)
+			end
+		end
+		
+		def loadConfig(klass, cfgroot, cfg)
+			Rails.logger.debug('SwapDmi: load ContextOfUse config')
+			cfgKey = "swapdmi.cfg.#{cfgroot}"
+			allCfg = Hash.new {|h,k| h[k] = {}}
+			rawCfg = cfg[cfgKey].nil? ? {} : cfg[cfgKey]
+			allCfg.merge!(rawCfg)
+			allCfg.each do |k,xcfg|
+				Rails.logger.debug("SwapDmi:\t--> #{cfgroot} = #{k}") 
+				klass.config(k.to_s.to_sym).merge!(xcfg)
+			end
+		end
+		
+		def loadMergeDelegates(cfg)
+			Rails.logger.debug('SwapDmi: assign merge impl delegates')
+			mrgCfg = Hash.new {|h,k| h[k] = Array.new } 
+			xcfg = cfg['swapdmi.bind.mergeDelegates'].nil? ? {} : cfg['swapdmi.bind.mergeDelegates']
+			mergCfg.merge!(xcfg)
+			mergCfg.each do |k,delegates|
+				merge = ModelImpl[k.to_sym]
+				next unless merge.respond_to?(:delegateTo)
+				xds = delegates.map {|id| id.to_s.to_sym}
+				merge.delegateTo(*xds)
+			end
+		end
+		
+		def loadBindImpls(cfg)
+			Rails.logger.debug('SwapDmi: bind impl to schema')
+			bindCfg = Hash.new {|h,k| h[k] = Hash.new}
+			xcfg = cfg['swapdmi.bind'].nil? ? {} : cfg['swapdmi.bind']
+			bindCfg.merge!(xcfg)
+			bindCfg.each do |cxtk,binds|
+				context = SwapDmi::ContextOfUse[cxtk]
+				if binds.instance_of?(Hash)
+					binds.each {|nk,ik| context.setImpl(nk.to_s.to_sym, ik.to_s.to_sym) }
+				else
+					context.setImpl(SwapDmi::ContextOfUse::DefaultImplId, binds.to_s.to_sym)
+				end
+			end
 		end
 	end 
 

@@ -2,6 +2,16 @@
 require 'rubygems'
 require 'swapdmi'
 
+#set up asserts & stuiff
+
+def assertNotNil(x)
+	throw :nil if x.nil?
+end
+
+def assertEquals(exp, act)
+	throw :bad unless exp == act
+end
+
 #set global flag picked up by the initializer to not bring in real rails libraries
 $test = true
 
@@ -52,18 +62,38 @@ class Base
 end	end
 
 yaml = { 'env' => {
-	'swapdmi.loadDomainDefinitions' => [
-		'test'
-	],
-	'swapdmi.loadDomainImplementations' => [
-		'testimpl'
-
-	],
-	'swapdmi.defaultModelLogicId' => 'test'	
+	'swapdmi.cfg.schema' => {
+		'cxt1' => { 'a' => 1, 'b' => 2 },
+		'cxt2' => { 'a' => 3, 'b' => 4 },
+	},
+	'swapdmi.cfg.impl' => {
+		'imp1' => { 'a' => 1, 'b' => 2 },
+		'imp2' => { 'a' => 3, 'b' => 4 },
+	},
+	'swapdmi.bind' => {
+		'test1' => { 'a' => 'imp1', 'b' => 'imp2' },
+		'test2' => { 'a' => 'imp2', 'b' => 'imp1' },
+	},
+	'swapdmi.files' => ['schema', 'context', 'impl'],
 }}
 
-
 SwapDmi::SwapDmiInit.invoke(:rails, :cfg => yaml)
+
+puts 'init done. running tests to ensure everything loaded correctly'
+
+{
+	:cxt1 => [2,8],
+	:cxt2 => [9,6]
+	
+}.each do |cxtk,pair|
+	puts "test context #{cxtk}"
+	dsource = Test::TestDataSource[cxtk]
+	assertNotNil(dsource)
+	model = dsource[1]
+	assertNotNil(model)
+	assertEquals(pair[0], model.a)
+	assertEquals(pair[1], model.b)
+end
 
 puts 'test complete. no problems encountered'
 
