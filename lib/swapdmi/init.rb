@@ -32,22 +32,27 @@ module SwapDmi
 		end
 		
 		def self.invoke(key = nil, args = {})
-			initer = self
+			iklass = self
 			unless key.nil?
 				root = args[:srcroot]
 				root = "swapdmi-init/#{key}" if root.nil?
 				Kernel.require(root)
-				initer = @@definedInits[key]
+				iklass = @@definedInits[key]
 			end
 
-			initer.new(key).invoke(args)
+			initer = iklass.new(key)
+			xargs = initer.defaultArgs.merge(args)
+			initer.invoke(xargs)
+		end
+		
+		def defaultArgs()
+			{}
 		end
 		
 		def invoke(args = {})
 			throw 'unimplemented SwapDmi initialization'
 		end
 	end
-	
 	
 end
 
