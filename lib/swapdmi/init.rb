@@ -40,7 +40,7 @@ module SwapDmi
 				iklass = @@definedInits[key]
 			end
 
-			initer = iklass.new(key)
+			initer = iklass.new
 			xargs = initer.defaultArgs.merge(args)
 			initer.invoke(xargs)
 		end
