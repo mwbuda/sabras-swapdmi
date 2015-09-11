@@ -15,7 +15,7 @@ TestContext = SwapDmi::ContextOfUse.new(:test)
 TestModelData = Hash.new {|h,k| h[k] = Hash.new }
 
 TestModelImpl = SwapDmi::ModelImpl.new(:test)
-TestContext.setImpl(:default, TestModelImpl)
+TestContext.setImpl(:default, :test)
 
 puts 'check model impl'
 modelImpl = SwapDmi::ModelImpl.instance(:test)
