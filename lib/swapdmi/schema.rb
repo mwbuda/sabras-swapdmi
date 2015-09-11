@@ -35,8 +35,7 @@ module SwapDmi
 		end
 		
 		def setImpl(k, implk)
-			ck = implk.nil? ? :default : k
-			ci = implk.nil? ? k : implk
+			ck, ci = implk.nil? ? [:default,k] : [k,implk]
 			@impls[ck] = ci
 			self
 		end
@@ -99,6 +98,10 @@ module SwapDmi
 		
 		def impl(k = :default)
 			self.contextOfUse.impl(k)
+		end
+		
+		def impls()
+			self.contextOfUse.impls
 		end
 
 	end
