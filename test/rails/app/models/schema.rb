@@ -3,11 +3,11 @@ module Test
 
 	class TestModel < SwapDmi::Model
 		def a()
-			impl[:a].call(config['a'])
+			impls[:a][:a].call(config['a'])
 		end
 		
 		def b()
-			impl[:b].call(config['b'])
+			impls[:b][:b].call(config['b'])
 		end
 	end
 	

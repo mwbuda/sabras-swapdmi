@@ -57,7 +57,9 @@ end
 
 module ActionController
 class Base
-	#nothing else required, we just need it around to be extended by the initializer
+	def self.before_action(sym)
+		#do nothing
+	end
 	
 end	end
 
@@ -71,8 +73,8 @@ yaml = { 'env' => {
 		'imp2' => { 'a' => 3, 'b' => 4 },
 	},
 	'swapdmi.bind' => {
-		'test1' => { 'a' => 'imp1', 'b' => 'imp2' },
-		'test2' => { 'a' => 'imp2', 'b' => 'imp1' },
+		'cxt1' => { 'a' => 'imp1', 'b' => 'imp2' },
+		'cxt2' => { 'a' => 'imp2', 'b' => 'imp1' },
 	},
 	'swapdmi.files' => ['schema', 'context', 'impl'],
 }}

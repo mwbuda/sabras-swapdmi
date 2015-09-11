@@ -144,7 +144,7 @@ module SwapDmi
 			loadConfig(SwapDmi::ContextOfUse, 'schema', cfg)
 			loadConfig(SwapDmi::ModelImpl, 'impl', cfg)
 			loadFiles(cfg)
-			loadMergeDelegate(cfg)
+			loadMergeDelegates(cfg)
 			loadBindImpls(cfg)
 			
 			Rails.logger.debug('done initializing SwapDmi')
@@ -173,7 +173,7 @@ module SwapDmi
 		
 		def loadMergeDelegates(cfg)
 			Rails.logger.debug('SwapDmi: assign merge impl delegates')
-			mrgCfg = Hash.new {|h,k| h[k] = Array.new } 
+			mergCfg = Hash.new {|h,k| h[k] = Array.new } 
 			xcfg = cfg['swapdmi.bind.mergeDelegates'].nil? ? {} : cfg['swapdmi.bind.mergeDelegates']
 			mergCfg.merge!(xcfg)
 			mergCfg.each do |k,delegates|
@@ -190,7 +190,7 @@ module SwapDmi
 			xcfg = cfg['swapdmi.bind'].nil? ? {} : cfg['swapdmi.bind']
 			bindCfg.merge!(xcfg)
 			bindCfg.each do |cxtk,binds|
-				context = SwapDmi::ContextOfUse[cxtk]
+				context = SwapDmi::ContextOfUse[cxtk.to_sym]
 				if binds.instance_of?(Hash)
 					binds.each {|nk,ik| context.setImpl(nk.to_s.to_sym, ik.to_s.to_sym) }
 				else
