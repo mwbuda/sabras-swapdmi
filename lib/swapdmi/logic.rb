@@ -99,7 +99,7 @@ module SwapDmi
 					dlogic = SwapDmi::ModelImpl[dkey]
 					subresults[dkey] = dlogic[*keys].call(*args)
 				end
-				recv.instance_exec(subresults,&logic)
+				recv.instance_exec(args, subresults, &logic)
 			end
 			
 			super(*keys, &mlogic)
