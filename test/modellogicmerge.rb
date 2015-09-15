@@ -61,24 +61,24 @@ Setup.keys.each do |k|
 end
 
 puts 'define array logic'
-Merge.define(:array) do |subres|
+Merge.define(:array) do |args, subres|
 	res = []
 	subres.values.each {|sres| res += sres }
 	res
 end
 
 puts 'define scalar one logic'
-Merge.define(:scalar, :one) do |subres|
+Merge.define(:scalar, :one) do |args, subres|
 	subres.values
 end
 
 puts 'define scalar two logic'
-Merge.define(:scalar, :two) do |subres|
+Merge.define(:scalar, :two) do |args, subres|
 	subres.values
 end
 
 puts 'define check id logic'
-Merge.define(:checkId) do |subres|
+Merge.define(:checkId) do |args, subres|
 	"#{self.id}(#{subres.keys.sort.join(',')})"
 end
 
