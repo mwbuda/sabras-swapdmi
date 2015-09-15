@@ -27,6 +27,7 @@ module SwapDmi
 		
 		def whenAssignIdDo(&behavior)
 			self.class_variable_get(:@@onAssignId) << behavior
+			self
 		end
 		
 		module Instance
@@ -52,18 +53,31 @@ module SwapDmi
 		def self.extended(base)
 			base.extend(SwapDmi::HasId) unless SwapDmi::HasId.extends?(base)
 			base.instance_eval { include SwapDmi::TrackClassHierarchy::Instance }
-			
+				
 			base.class_variable_set(:@@ixs, {})
 			base.class_variable_set(:@@masterClass, base)
 			base.class_variable_set(:@@defaultIxId, :default)
+			base.class_variable_set(:@@preventIxIdOverwrite, false)
 			
 			base.whenAssignIdDo do |id| 
+				if self.class.preventInstanceIdOverwrite? and self.class.hasInstance?(id)
+					throw "TrackClassHierarchy Duplicate Id Error: #{id} in #{self.class.masterclass}"
+				end
 				self.class.trackInstance(self.id, self)
 			end
 		end
 		
 		def masterclass()
 			self.class_variable_get(:@@masterClass)
+		end
+		
+		def preventInstanceIdOverwrite?()
+			self.class_variable_get(:@@preventIxIdOverwrite)
+		end
+		
+		def preventInstanceIdOverwrite(prevent = true)
+			self.class_variable_set(:@@preventIxIdOverwrite, prevent)
+			self
 		end
 		
 		def defineDefaultInstance(id)
@@ -84,26 +98,25 @@ module SwapDmi
 			self.allInstances[id] = instance
 		end
 		
-		def instance(id = nil)
+		def instance(id = self.defaultId)
 			cleanId = id.nil? ? self.defaultId : id
 			instance = self.allInstances[cleanId]
-			throw "undefined class instance from hierarchy #{masterclass}: #{cleanId}" if instance.nil?
+			#throw "undefined class instance from hierarchy #{masterclass}: #{cleanId}" if instance.nil?
 			instance
 		end
 		alias :[] :instance
 		
 		def default()
-			self.instance(nil) 
+			self.instance(self.defaultId) 
 		end
 		
-		def hasInstance?(id = nil)
-			cleanId = id.nil? ? self.defaultId : id
-			instance = self.allInstances[cleanId]
+		def hasInstance?(id = self.defaultId)
+			instance = self.allInstances[id]
 			!instance.nil?
 		end
 		
 		def hasDefault?()
-			self.hasInstance?(nil)
+			self.hasInstance?(self.defaultId)
 		end
 		
 		module Instance
@@ -161,6 +174,49 @@ module SwapDmi
 			root.has_key?(keys[-1])
 		end
 		
+	end
+	
+	#simple key/value stores in a tracked class hierarchy
+	#	typically used to provide TrackClassHierarchy like behavior for pre-existing types
+	#	which do not extend the SwapDmi module
+	#	(canonical example being loggers thru the base install logging extension)
+	class Registry
+		extend TrackClassHierarchy
+		preventInstanceIdOverwrite
+		
+		attr_accessor :defaultId
+		
+		def initialize(id)
+			assignId(id)
+			@registry = {}
+		end
+		
+		def defineDefaultInstance(id)
+			self.defaultId = id
+			self
+		end
+		
+		def register(id, logger)
+			@registry[id] = logger
+			self
+		end
+		
+		def []=(id,logger)
+			self.register(id, logger)
+			logger
+		end
+		
+		def [](id)
+			@registry[id]
+		end
+		
+		def default()
+			self[self.defaultId]
+		end
+		
+		def has?(id = self.defaultId)
+			@registry.keys.include?(id)
+		end
 	end
 	
 end
