@@ -1,40 +1,25 @@
 module SwapDmi
   SwapDmi.declareExtension(:caching)
 
-
   class Cache
 
     @server
-
-    #will automatically default to files as the server if one is not passed in
-    def getServerType()
-      if !server
-        @server = "files"
-      end
-    end
+    @key
+    @data
+    #default logic for expires is set to 1440 minutes or 1 day
+    @expires = 1440
+    @tags = []
 
     def save(key, data, expires, tags)
-      if server == "files"
-        Files.save(key, data, expires, tags)
-      elsif server == "memcached"
-        Memcached.save(key, data, expires, tags)
-      elsif server == "redis"
-        Redis.save(key, data, expires, tags)
-      else
-        Files.save(key, data, expires, tags)
-      end
+      server.save(key, data, expires, tags)
     end
 
-    def clean(tags)
-      if server == "files"
-        Files.clean(tags)
-      elsif server == "memcached"
-        Memcached.clean(tags)
-      elsif server == "redis"
-        Redis.clean(tags)
-      else
-        Filse.clean(tags)
-      end
+    def cleanByTag(tag)
+      server.clean(tag)
+    end
+
+    def cleanTags(tags)
+      server.clean(tags)
     end
 
   end
