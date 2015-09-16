@@ -37,7 +37,7 @@ $impl = SwapDmi::ModelImpl.new(:test)
 	session = sessionHandling.fetchForUser(id)
 	implsym(icall, id, session.id)
 end end
-$context.setImpl(:default, $impl)
+$context.setImpl(:default, :test)
 
 puts 'define schema'
 class TestModel < SwapDmi::Model
