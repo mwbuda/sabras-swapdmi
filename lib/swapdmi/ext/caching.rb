@@ -2,7 +2,7 @@ module SwapDmi
   SwapDmi.declareExtension(:caching)
 
 
-  class Server
+  class Cache
 
     @server
 
@@ -37,36 +37,6 @@ module SwapDmi
       end
     end
 
-  end
-
-  class Files
-    def save(key, data, expires, tags)
-      #Code here to save the files
-    end
-
-    def clean(tags)
-
-    end
-  end
-
-  class Memcached
-    def save(key, data, expires, tags)
-
-    end
-
-    def clean(tags)
-
-    end
-  end
-
-  class Redis
-    def save(key, data, expires, tags)
-
-    end
-
-    def clean(tags)
-
-    end
   end
 
 end
