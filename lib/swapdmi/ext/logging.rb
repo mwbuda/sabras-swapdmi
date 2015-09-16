@@ -25,9 +25,7 @@ module SwapDmi
 	module HasLog
 		
 		def self.extended(base)
-			logTable = Hash.new do |instances,id|
-				instances[id] = :default
-			end
+			logTable = {}
 			base.class_variable_set(:@@logging, logTable)
 			base.instance_eval { include SwapDmi::HasLog::Instance }
 		end
@@ -39,6 +37,7 @@ module SwapDmi
 		
 		def logger(id)
 			logid = self.class_variable_get(:@@logging)[id]
+			logid = SwapDmi::LogRegistry.defaultId if logid.nil?
 			SwapDmi::LogRegistry[logid]
 		end
 		
