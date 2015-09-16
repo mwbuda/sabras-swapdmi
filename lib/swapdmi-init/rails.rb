@@ -32,19 +32,9 @@ end
 RailsBaseController = ActionController::Base
 
 module SwapDmi
-	
-	#swapDmi logger wh/ will integrate with rails logger
-	RailsLogger = SwapDmi::Logger.new(:rails) do |level,m|
-		clevel = level.to_s.downcase.to_sym
-		case level
-			when :debug then Rails.logger.debug(m)
-			when :info then Rails.logger.info(m)
-			when :warn then Rails.logger.warn(m)
-			when :error then Rails.logger.error(m)
-			when :fatal then Rails.logger.fatal(m)
-			when :unknown then Rails.logger.unknown(m)
-		end
-	end
+		
+	RailsLogger = Rails.logger
+	SwapDmi::LogRegistry.register(:rails, RailsLogger)
 	
 	#extend SessionInfo for de/serializing to/from Rails Session objects
 	class SessionInfo
@@ -91,17 +81,29 @@ module SwapDmi
 	RailsSessionHandling.defineFetch(&nil)
 	
 	RailsSessionHandling.defineFetchCurrent do 
-		railsSession = Thread.current[:railsSession]
-		session = SwapDmi::SessionInfo.fromRails(railsSession)
-		Thread.current[:swapdmiSession] = session unless session.nil?
+		session = Thread.current[:swapdmiSession]
+		
+		if session.nil?
+			railsSession = Thread.current[:railsSession]
+			unless railsSession.nil?
+				session = SwapDmi::SessionInfo.fromRails(railsSession)
+				Thread.current[:swapdmiSession] = session
+			end 
+		end
+
 		session
 	end
 	
 	RailsSessionHandling.defineTracking do |session|
 		railsSession = Thread.current[:railsSession]
-		session.updateRails(railsSession)
-		Thread.current[:swapdmiSession] = session unless railsSession.nil?		
-		railsSession.nil? ? nil : session
+			
+		unless railsSession.nil?
+			session.updateRails(railsSession)
+			Thread.current[:swapdmiSession] = session
+			session
+		else
+			nil
+		end
 	end
 	
 	#need to module-extend BaseController to capture session where we can get at it
@@ -135,12 +137,13 @@ module SwapDmi
 				SwapDmi::SessionHandling.defineDefaultInstance(:rails)
 			end
 
-			SwapDmi::Logger.defineDefaultInstance(:rails)			
+			SwapDmi::LogRegistry.defineDefaultInstance(:rails)
 				
 			xcfg = args[:cfg]
 			xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
 			cfg = xcfg[Rails.env]
 	
+			loadSetDefaults(cfg)
 			loadConfig(SwapDmi::ContextOfUse, 'schema', cfg)
 			loadConfig(SwapDmi::ModelImpl, 'impl', cfg)
 			loadFiles(cfg)
@@ -148,6 +151,21 @@ module SwapDmi
 			loadBindImpls(cfg)
 			
 			Rails.logger.debug('done initializing SwapDmi')
+		end
+		
+		def loadSetDefaults(cfg)
+			
+			mainKey = 'swapdmi.defaults'
+			mapping = {
+				'context' => SwapDmi::ContextOfUse,
+				'impl' => SwapDmi::ModelImpl,
+			}
+			
+			mapping.each do |k, klass|
+				fk = "#{mainKey}.#{k}"
+				v = cfg[fk]
+				klass.defineDefaultInstance(v.to_s.to_sym) unless v.nil?
+			end
 		end
 		
 		def loadFiles(cfg)
