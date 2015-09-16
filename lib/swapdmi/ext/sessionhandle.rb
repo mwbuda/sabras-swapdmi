@@ -95,7 +95,7 @@ module SwapDmi
 			self
 		end
 		def fetchForUser(uid, sundry = {})
-			@userFetch.nil? ? nil : @userFetch.call(uid, sundry)
+			@userFetch.nil? ? nil : self.instance_exec(uid, sundry, &@userFetch)
 		end
 		def hasForUser?(uid, sundry = {})
 			fetchForUser(uid,sundry).nil? ? false : true
@@ -106,7 +106,7 @@ module SwapDmi
 			self
 		end
 		def fetch(sid)
-			@idFetch.nil? ? nil : @idFetch.call(sid)
+			@idFetch.nil? ? nil : self.instance_exec(sid, &@idFetch)
 		end
 		def has?(sid)
 			fetch(sid).nil? ? false : true
@@ -117,7 +117,7 @@ module SwapDmi
 			self
 		end
 		def fetchCurrent()
-			@currFetch.nil? ? nil : @currFetch.call
+			@currFetch.nil? ? nil : self.instance_exec(&@currFetch)
 		end
 		def hasCurrent?()
 			fetchCurrent.nil? ? false : true
@@ -131,7 +131,7 @@ module SwapDmi
 			self
 		end
 		def search(criteria = {})
-			@search.nil? ? nil : @search.call(criteria)
+			@search.nil? ? nil : self.instance_exec(criteria, &@search)
 		end
 		
 		def defineParsing(&parse)
@@ -140,7 +140,7 @@ module SwapDmi
 		end
 		def parse(raw)
 			@parse = SwapDmi::DefaultSessionParsing if @parse.nil?
-			@parse.call(raw)
+			self.instance_exec(raw, &@parse)
 		end
 		
 		def defineTracking(&track)
@@ -149,7 +149,7 @@ module SwapDmi
 		end
 		def track(session)
 			@track = DefaultSessionTracking if @track.nil?
-			@track.call(session)
+			self.instance_exec(session, &@track)
 			session
 		end
 		
