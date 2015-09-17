@@ -10,16 +10,17 @@ module SwapDmi
     @expires = 1440
     @tags = []
 
+
     def save(key, data, expires, tags)
-      self.save(key, data, expires, tags)
+      server.save(key, data, expires, tags)
     end
 
     def cleanByKey(key)
-      self.clean(key)
+      server.clean(key)
     end
 
     def cleanTags(tags)
-      self.clean(tags)
+      server.clean(tags)
     end
 
   end
