@@ -11,15 +11,35 @@ module SwapDmi
     @tags = []
 
     def save(key, data, expires, tags)
-      server.save(key, data, expires, tags)
+      self.save(key, data, expires, tags)
     end
 
-    def cleanByTag(tag)
-      server.clean(tag)
+    def cleanByKey(key)
+      self.clean(key)
     end
 
     def cleanTags(tags)
-      server.clean(tags)
+      self.clean(tags)
+    end
+
+  end
+
+  class Files
+    extend Cache
+
+    #Uses the key as the filename in order to save the file into it's proper location
+    def save(key, data, location)
+      f = File.new(location + "/" +key, "w+")
+      f.write(data + "\n")
+      f.close
+    end
+
+    def cleanKey(key, location)
+      #check if file exists
+      if(file?(location + "/" +key))
+        file.unlink(location + "/" + key)
+      end
+
     end
 
   end
