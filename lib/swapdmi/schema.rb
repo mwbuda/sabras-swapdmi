@@ -139,6 +139,7 @@ module SwapDmi
 			@defaultModelType = type
 			self
 		end
+		alias :defineModelType :defineDefaultModelType
 		def self.defaultModelType()
 			@defaultModelType
 		end
