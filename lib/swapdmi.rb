@@ -2,16 +2,14 @@
 
 require 'swapdmi/framework'
 
-require 'swapdmi/logic'
+require 'swapdmi/core/modelImpl'
+require 'swapdmi/core/mergedModelImpl'
 
-require 'swapdmi/schema'
+require 'swapdmi/core/contextOfUse'
+require 'swapdmi/core/model'
+require 'swapdmi/core/dataSource'
+require 'swapdmi/core/smartDataSource'
 
-require 'swapdmi/extension'
-
-require 'swapdmi/init'
-
-
-
-
-
+require 'swapdmi/core/extension'
+require 'swapdmi/core/init'
 
