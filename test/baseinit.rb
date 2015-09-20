@@ -60,11 +60,12 @@ class TestModel < SwapDmi::Model
 end
 
 puts 'define schema: data source'
-class TestDataSource < SwapDmi::DataSource
+class TestDataSource < SwapDmi::SmartDataSource
 	defineDefaultModelType TestModel
+	whiteListModelType TestModel
 	fetchResolvesNil
 	
-	defineModelInit do |id| 
+	defineModelPreInit do |id| 
 		{:id => id, :dsv => self.dsv}
 	end
 	
