@@ -30,20 +30,20 @@ module SwapDmi
       @save = block
     end
 
-    def getData()
-      self.evict if @evictWhen[:get]
+    def getData(tags)
+      self.evict(tags) if @evictWhen[:get]
       self.instance_exec(k, &@getData)
     end
 
     def cleanByKey(key)
-      server.clean(key)
+      self.evict(key)
     end
 
     def cleanTags(tags)
-      server.clean(tags)
+      self.evict(tags)
     end
 
-    def evict()
+    def evict(tags)
       self.instance_exec(&@evict)
     end
 
