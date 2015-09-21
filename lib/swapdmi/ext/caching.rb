@@ -3,16 +3,36 @@ module SwapDmi
 
   class Cache
 
-    @server
-    @key
-    @data
-    #default logic for expires is set to 1440 minutes or 1 day
-    @expires = 1440
-    @tags = []
+    defineInternalData(k, &initdata)
+    @internal[k] = initdata.call
 
+    def defineEviction(&block)
+      @evict = block
+    end
 
-    def save(key, data, expires, tags)
-      server.save(key, data, expires, tags)
+    def doEvictWhen(*checkpoints)
+      checkpoints.each {|cp| @evictWhen[cp] = true}
+    end
+
+    def checkReady
+      return if @readyFlag
+      self.instance_exec(&@ready)
+      @readyFlag = true
+    end
+
+    def save(key, data, *tags)
+      self.checkReady
+      self.evict if @evictWhen[:save]
+      self.instance_exec(key, data, tags, &@save)
+    end
+
+    def defineSave(&block)
+      @save = block
+    end
+
+    def getData()
+      self.evict if @evictWhen[:get]
+      self.instance_exec(k, &@getData)
     end
 
     def cleanByKey(key)
@@ -23,27 +43,12 @@ module SwapDmi
       server.clean(tags)
     end
 
-  end
-
-  class Files
-    extend Cache
-
-    #Uses the key as the filename in order to save the file into it's proper location
-    def save(key, data, location)
-      f = File.new(location + "/" +key, "w+")
-      f.write(data + "\n")
-      f.close
-    end
-
-    def cleanKey(key, location)
-      #check if file exists
-      if(file?(location + "/" +key))
-        file.unlink(location + "/" + key)
-      end
-
+    def evict()
+      self.instance_exec(&@evict)
     end
 
   end
+
 
 end
 

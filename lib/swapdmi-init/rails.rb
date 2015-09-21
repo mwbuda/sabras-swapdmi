@@ -16,6 +16,7 @@
 require 'swapdmi'
 require 'swapdmi/ext/sessionhandle'
 require 'swapdmi/ext/logging'
+require 'swapdmi/ext/caching'
 
 #ruby on rails specific required libraries.
 #	we put this in a guard for purposes of testing the extension,
