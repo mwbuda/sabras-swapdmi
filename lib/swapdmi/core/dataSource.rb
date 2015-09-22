@@ -1,6 +1,11 @@
 
 module SwapDmi
 	
+	#TODO: make modelCache properly align for subclass types
+	#	EG if we have a modelCache init code for Type A,
+	#	instances of type B wh/ extends A should use model cache for type A,
+	#	unless we specifically create an additional model cache init def for type B
+	
 	#
 	# specialized Model which serves as root to access & manipulate the domain model,
 	#	in other words the starting point for an API user; the 1st component they will use to access the model
@@ -145,10 +150,24 @@ module SwapDmi
 		
 		# manually caches a model in the cache
 		#	note that this allows you to cache a model w/ a different contextOfUse than the governing dataSource
-		def cacheModel(model)
-			mcache = self.modelCache[model.class]
-			throw :unsupportedType if mcache.nil?
-			mcache[model.id] = model
+		def cacheModel(*models)
+			models.each do |model|
+				mcache = self.modelCache[model.class]
+				throw :unsupportedType if mcache.nil?
+				mcache[model.id] = model
+			end
+			self
+		end
+		
+		def clearModelCache(*modelTypes)
+			modelTypes = [self.class.modelType] if modelTypes.empty?
+			modelTypes.compact!
+			modelTypes.each do |modelType|
+				mcache = self.modelCache[modelType]
+				next if mcache.nil?
+				mcache.clear
+			end 
+			self
 		end
 		
 		# fetch a model from the cache
