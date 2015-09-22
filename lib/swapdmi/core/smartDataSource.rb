@@ -11,19 +11,8 @@ module SwapDmi
 		#	model cache initialization proc, wh/ will use the other hooks we have on SmartDataSource
 		def self.initModelCache()
 			@defaultBuildModelCache = Proc.new do |modelType| 
-				Hash.new do |models,id|
-					modelPreInit = self.class.modelPreInit(modelType)
-					params = self.instance_exec(id, &modelPreInit)
-					
-					mx = modelType.new(id, self.context, params)
-					
-					modelPostInit = self.class.modelPostInit(modelType)
-					self.instance_exec(mx, &modelPostInit) unless modelPostInit.nil?
-					
-					models[id] = mx
-				end
+				Hash.new {|models,id| models[id] = self.touchModel(id, modelType) }
 			end if @defaultBuildModelCache.nil?
-			
 			super
 		end
 		
@@ -77,11 +66,21 @@ module SwapDmi
 		end
 		
 		# instantiates a model in the cache using the defined init logic
-		def touchModel(id, type = self.class.defaultModelType)
-			mcache = self.modelCache[type]
+		def touchModel(id, modelType = self.class.defaultModelType, xsundry = {})
+			mcache = self.modelCache[modelType]
 			throw :unsupportedType if mcache.nil?
-			self.modelCache[id]
-		end
+			
+			modelPreInit = self.class.modelPreInit(modelType)
+			params = self.instance_exec(id, &modelPreInit)
+			params.merge!(xsundry) unless xsundry.nil?
+			
+			mx = modelType.new(id, self.context, params)
+			
+			modelPostInit = self.class.modelPostInit(modelType)
+			self.instance_exec(mx, &modelPostInit) unless modelPostInit.nil?
+			
+			mcache[id] = mx
+		end		
 		
 		def fetchModel(id, type = self.class.defaultModelType)
 			mcache = self.modelCache[type]
