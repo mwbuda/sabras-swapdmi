@@ -65,11 +65,11 @@ module SwapDmi
 			@fetchResolvesNil[modelType]
 		end
 		
-		# instantiates a model in the cache using the defined init logic
+		# instantiates a modelfrom this data source 
+		#	using the defined init logic, and linked to this datasource's contextOfUse
+		# will NOT store the model in the cache. this must be done explicitly after touching the model instance
+		#
 		def touchModel(id, modelType = self.class.defaultModelType, xsundry = {})
-			mcache = self.modelCache[modelType]
-			throw :unsupportedType if mcache.nil?
-			
 			modelPreInit = self.class.modelPreInit(modelType)
 			params = self.instance_exec(id, &modelPreInit)
 			params.merge!(xsundry) unless xsundry.nil?
@@ -79,7 +79,7 @@ module SwapDmi
 			modelPostInit = self.class.modelPostInit(modelType)
 			self.instance_exec(mx, &modelPostInit) unless modelPostInit.nil?
 			
-			mcache[id] = mx
+			mx
 		end		
 		
 		def fetchModel(id, type = self.class.defaultModelType)
