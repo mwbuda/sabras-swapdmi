@@ -5,12 +5,13 @@ module SwapDmi
 	#
 	#
 	class MergedModelImpl < ModelImpl
+		DefaultFilter = Proc.new {|delegate, *args| true}
 		
 		def initialize(id = :unnamed)
 			super(id)
 			@delegates = []
 			@filters = Hash.new do |allFilters, keys| allFilters[keys] = Hash.new do |actionFilters,delegate|
-				Proc.new {|*args| true}
+				actionFilters[delegate] = DefaultFilter
 			end end
 		end
 
@@ -37,15 +38,16 @@ module SwapDmi
 			@delegates.dup
 		end
 
+		def filterFor(delegate, *keys)
+			@filters[keys][delegate]
+		end
+		
 		def define(*keys, &logic)
-			delegates = @delegates
-			filters = @filters[keys]
-			
 			recv = self
 			mlogic = Proc.new do |*args|
 				subresults = {}
-				delegates.each do |dkey|
-					next unless filters[dkey].call(dkey, *args)
+				recv.delegates.each do |dkey|
+					next unless recv.filterFor(dkey, *keys).call(dkey, *args)
 					dlogic = SwapDmi::ModelImpl[dkey]
 					subresults[dkey] = dlogic[*keys].call(*args)
 				end
