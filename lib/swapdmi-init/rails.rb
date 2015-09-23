@@ -84,13 +84,21 @@ module SwapDmi
 			true
 		end
 	end
-	
+
+	#define cache via hash
+	myCache = Cache.new(:id)
+	myCache.defineInternalData(:myHash, Hash.new)
+	myCache.defineSave do |k,d,tags|
+		@myHash[k] = d
+		internal[:myhash][k] = d
+		end
+
 	#define a SessionHandling wh/ will integrate with Rails
 	RailsSessionHandling = SwapDmi::SessionHandling.new(:rails)
-	
+
 	RailsSessionHandling.defineFetchForUser(&nil)
 	RailsSessionHandling.defineFetch(&nil)
-	
+
 	RailsSessionHandling.defineFetchCurrent do 
 		railsSession = Thread.current[:railsSession]
 		session = SwapDmi::SessionInfo.fromRails(railsSession)

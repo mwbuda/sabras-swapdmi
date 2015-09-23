@@ -10,6 +10,10 @@ module SwapDmi
       @evict = block
     end
 
+    def defineInternalData(type, object)
+      @type = type
+    end
+
     def doEvictWhen(*checkpoints)
       checkpoints.each {|cp| @evictWhen[cp] = true}
     end
@@ -22,7 +26,7 @@ module SwapDmi
 
     def save(key, data, *tags)
       self.checkReady
-      self.evict if @evictWhen[:save]
+      self.evict(tags) if @evictWhen[:save]
       self.instance_exec(key, data, tags, &@save)
     end
 
