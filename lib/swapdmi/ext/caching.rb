@@ -3,15 +3,16 @@ module SwapDmi
 
   class Cache
 
-    defineInternalData(k, &initdata)
-    @internal[k] = initdata.call
+    def initialize()
+      @internal = {}
+    end
 
     def defineEviction(&block)
       @evict = block
     end
 
-    def defineInternalData(type, object)
-      @type = type
+    def defineInternalData(key, object)
+      @internal[key] = object
     end
 
     def doEvictWhen(*checkpoints)
@@ -34,8 +35,9 @@ module SwapDmi
       @save = block
     end
 
-    def getData(tags)
+    def getData(k, tags)
       self.evict(tags) if @evictWhen[:get]
+      @getData.call(k)
       self.instance_exec(k, &@getData)
     end
 
