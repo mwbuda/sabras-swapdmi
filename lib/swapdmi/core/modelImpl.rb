@@ -14,6 +14,18 @@ module SwapDmi
 			self.assignId(id)
 			@logics = HierarchicalIndex.new
 			@missingLogic = DefaultMissingLogic
+			@isReady = false
+		end
+		
+		def defineOnReady(&ready)
+			@readyLogic = ready
+		end
+		
+		def ready!()
+			return self if @isReady
+			self.instance_exec(&@readyLogic) unless @readyLogic.nil?
+			@isReady = true
+			self
 		end
 		
 		def define(*keys, &logic)

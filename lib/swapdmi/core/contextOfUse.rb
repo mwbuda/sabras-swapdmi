@@ -40,12 +40,18 @@ module SwapDmi
 		end
 		
 		def impl(k = :default)
-			SwapDmi::ModelImpl[ @impls[k] ]
+			mi = SwapDmi::ModelImpl[ @impls[k] ]
+			mi.ready! unless mi.nil?
+			mi
 		end
 		
 		def impls()
 			res = {}
-			@impls.each {|k,ik| res[k] = SwapDmi::ModelImpl[ik] }
+			@impls.each do |k,ik| 
+				mi = SwapDmi::ModelImpl[ik]
+				mi.ready! unless mi.nil?
+				res[k] = mi
+			end
 			res
 		end
 		
