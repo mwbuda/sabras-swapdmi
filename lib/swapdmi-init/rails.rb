@@ -93,10 +93,10 @@ module SwapDmi
 	end
 	myCache.defineSave do |k,d|
     time = Time.now.getutc
-		internal[:myhash][k][time] = d
+		internal[:myhash][k] = [timestamp,d]
 	end
 	myCache.defineGetData do |k|
-    
+    internal[:myhash][k]
 	end
 
 	myCache.save(k,d)
