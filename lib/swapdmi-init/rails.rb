@@ -105,7 +105,7 @@ module SwapDmi
 
 	myCache.save(k,d)
 
-	@data = myCache.getData(k)
+	@@data = myCache.getData(k)
 
 	#define a SessionHandling wh/ will integrate with Rails
 	RailsSessionHandling = SwapDmi::SessionHandling.new(:rails)
