@@ -91,12 +91,16 @@ module SwapDmi
 	myCache.defineEviction do
 
 	end
-	myCache.defineSave do |k,d,tags|
-		@myHash[k] = d
-		internal[:myhash][k] = d
+	myCache.defineSave do |k,d|
+    time = Time.now.getutc
+		internal[:myhash][k][time] = d
 	end
+	myCache.defineGetData do |k|
+    
+	end
+
 	myCache.save(k,d)
-	
+
 	@data = myCache.getData(k)
 
 	#define a SessionHandling wh/ will integrate with Rails

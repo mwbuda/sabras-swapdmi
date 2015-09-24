@@ -47,10 +47,6 @@ module SwapDmi
       @readyFlag = true
     end
 
-    def doEvictWhen(*checkpoints)
-      checkpoints.each {|cp| @evictWhen[cp] = true}
-    end
-
     # Cod that will take in the block to save
     def save(key, data)
       self.checkReady
