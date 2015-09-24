@@ -86,8 +86,8 @@ module SwapDmi
 	end
 
 	#define cache via hash
-	myCache = Cache.new(:id)
-	myCache.defineInternalData(:myHash, Hash.new)
+	myCache = Cache.new()
+	myCache.defineInternalData(:id, Hash.new)
 	myCache.defineSave do |k,d,tags|
 		@myHash[k] = d
 		internal[:myhash][k] = d

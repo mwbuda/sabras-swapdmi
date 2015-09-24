@@ -22,6 +22,8 @@ module SwapDmi
       @internal = {}
     end
 
+    #All defines are listed up here
+
     def defineEviction(&block)
       @evict = block
     end
@@ -29,6 +31,14 @@ module SwapDmi
     def defineInternalData(key, object)
       @internal[key] = object
     end
+
+    #defines the save block
+    def defineSave(&block)
+      @save = block
+    end
+
+
+    #all code is listed down here
 
     def doEvictWhen(*checkpoints)
       checkpoints.each {|cp| @evictWhen[cp] = true}
@@ -48,11 +58,6 @@ module SwapDmi
       self.instance_exec(key, data, tags, &@save)
     end
 
-    #defines the save block
-    def defineSave(&block)
-      @save = block
-    end
-
     # Retrieves the data from the hash
     def getData(k, tags)
       self.evict(tags) if @evictWhen[:get]
@@ -66,12 +71,6 @@ module SwapDmi
     end
 
   end
-
-  DefaultCache = Cache.new(:default)
-
-  []
-
-  Cache[:default]
 
 end
 
