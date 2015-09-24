@@ -23,7 +23,6 @@ module SwapDmi
     end
 
     #All defines are listed up here
-
     def defineEviction(&block)
       @evict = block
     end
@@ -37,31 +36,31 @@ module SwapDmi
       @save = block
     end
 
-
-    #all code is listed down here
-
-    def doEvictWhen(*checkpoints)
-      checkpoints.each {|cp| @evictWhen[cp] = true}
+    def defineGetData(&block)
+      @getData = block
     end
 
-    # Checks if hash is ready
+    #All code is listed down here
     def checkReady
       return if @readyFlag
       self.instance_exec(&@ready)
       @readyFlag = true
     end
 
+    def doEvictWhen(*checkpoints)
+      checkpoints.each {|cp| @evictWhen[cp] = true}
+    end
+
     # Cod that will take in the block to save
-    def save(key, data, &block)
+    def save(key, data)
       self.checkReady
-      self.evict(tags) if @evictWhen[:save]
-      self.instance_exec(key, data, tags, &@save)
+      self.evict(key) if @evictWhen[:save]
+      self.instance_exec(key, data, &@save)
     end
 
     # Retrieves the data from the hash
-    def getData(k, tags)
-      self.evict(tags) if @evictWhen[:get]
-      @getData.call(k)
+    def getData(k)
+      self.evict(k) if @evictWhen[:get]
       self.instance_exec(k, &@getData)
     end
 

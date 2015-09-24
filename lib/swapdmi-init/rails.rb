@@ -88,10 +88,16 @@ module SwapDmi
 	#define cache via hash
 	myCache = Cache.new()
 	myCache.defineInternalData(:id, Hash.new)
+	myCache.defineEviction do
+
+	end
 	myCache.defineSave do |k,d,tags|
 		@myHash[k] = d
 		internal[:myhash][k] = d
-		end
+	end
+	myCache.save(k,d)
+	
+	@data = myCache.getData(k)
 
 	#define a SessionHandling wh/ will integrate with Rails
 	RailsSessionHandling = SwapDmi::SessionHandling.new(:rails)
