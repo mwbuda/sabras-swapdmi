@@ -88,11 +88,15 @@ module SwapDmi
 	#define cache via hash
 	myCache = Cache.new()
 	myCache.defineInternalData(:id, Hash.new)
-	myCache.defineEviction do
-
+	myCache.defineEviction do |k|
+    myHash = internal[:myhash][k]
+    newTimeStamp = Time.now.getutc
+    if(newTimeStamp > myHash[0])
+      internal[:myhash].delete(k)
+    end
 	end
 	myCache.defineSave do |k,d|
-    time = Time.now.getutc
+    time = Time.now.getutc + 3600
 		internal[:myhash][k] = [timestamp,d]
 	end
 	myCache.defineGetData do |k|
