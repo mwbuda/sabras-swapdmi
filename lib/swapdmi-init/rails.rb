@@ -16,6 +16,7 @@
 require 'swapdmi'
 require 'swapdmi/ext/sessionhandle'
 require 'swapdmi/ext/logging'
+require 'swapdmi/ext/caching'
 
 #ruby on rails specific required libraries.
 #	we put this in a guard for purposes of testing the extension,
@@ -83,13 +84,35 @@ module SwapDmi
 			true
 		end
 	end
-	
+
+	#define cache via hash
+	myCache = Cache.new()
+	myCache.defineInternalData(:id, Hash.new)
+	myCache.defineEviction do |k|
+    myHash = internal[:myhash][k]
+    newTimeStamp = Time.now.getutc
+    if(newTimeStamp > myHash[0])
+      internal[:myhash].delete(k)
+    end
+	end
+	myCache.defineSave do |k,d|
+    time = Time.now.getutc + 3600
+		internal[:myhash][k] = [timestamp,d]
+	end
+	myCache.defineGetData do |k|
+    internal[:myhash][k]
+	end
+
+	myCache.save(k,d)
+
+	$data = myCache.getData(k)
+
 	#define a SessionHandling wh/ will integrate with Rails
 	RailsSessionHandling = SwapDmi::SessionHandling.new(:rails)
-	
+
 	RailsSessionHandling.defineFetchForUser(&nil)
 	RailsSessionHandling.defineFetch(&nil)
-	
+
 	RailsSessionHandling.defineFetchCurrent do 
 		railsSession = Thread.current[:railsSession]
 		session = SwapDmi::SessionInfo.fromRails(railsSession)
