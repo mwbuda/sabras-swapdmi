@@ -47,7 +47,7 @@ module SwapDmi
       @readyFlag = true
     end
 
-    # Cod that will take in the block to save
+    # Code that will take in the block to save
     def save(key, data)
       self.checkReady
       self.evict(key) if @evictWhen[:save]
