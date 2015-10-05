@@ -17,6 +17,8 @@ module SwapDmi
   end
 
   class Cache
+    extend HasConfig 
+    extend TrackClassHierarchy
 
     def initialize()
       @internal = {}
