@@ -17,11 +17,12 @@ module SwapDmi
   end
 
   class Cache
-    extend HasConfig 
+    extend HasConfig
     extend TrackClassHierarchy
 
-    def initialize()
+    def initialize(id)
       @internal = {}
+      assignId = id;
     end
 
     #All defines are listed up here
