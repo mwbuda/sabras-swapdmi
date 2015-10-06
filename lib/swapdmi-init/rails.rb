@@ -148,6 +148,7 @@ module SwapDmi
 			loadConfig(SwapDmi::ModelImpl, 'impl', cfg)
 			loadFiles(cfg)
 			loadMergeDelegates(cfg)
+			#TODO: simple always/never merge impl p/ delegate filters
 			loadBindImpls(cfg)
 			
 			Rails.logger.debug('done initializing SwapDmi')
@@ -201,6 +202,7 @@ module SwapDmi
 				merge.delegateTo(*xds)
 			end
 		end
+		
 		
 		def loadBindImpls(cfg)
 			Rails.logger.debug('SwapDmi: bind impl to schema')
