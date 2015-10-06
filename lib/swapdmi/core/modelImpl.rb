@@ -36,7 +36,7 @@ module SwapDmi
 		end
 		
 		def defines?(*keys)
-			@logics.has?(keys)
+			@logics.has?(*keys)
 		end
 		
 		def defineMissing(&logic)

@@ -168,10 +168,10 @@ module SwapDmi
 			self.get(ks)
 		end
 		
-		def has?(ks)
+		def has?(*ks)
 			root = @data
-			keys[0..-2].each {|k| root = root[k]}
-			root.has_key?(keys[-1])
+			ks[0..-2].each {|k| root = root[k]}
+			root.has_key?(ks[-1])
 		end
 		
 	end
