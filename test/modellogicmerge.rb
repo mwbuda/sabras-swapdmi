@@ -56,8 +56,8 @@ Merge.delegateTo(*Setup.keys)
 puts 'create filters'
 Setup.keys.each do |k|
 	puts "\t filters for #{k}" 
-	Merge.defineFilterFor(k, :array) {|dk, filter, args| filter =~ /#{dk}/} 
-	Merge.defineFilterFor(k, :scalar, :one) {|dk, filter, args| filter =~ /#{dk}/}
+	Merge.defineFilterFor(k, :array)        {|dk, d, filter, args| filter =~ /#{dk}/} 
+	Merge.defineFilterFor(k, :scalar, :one) {|dk, d, filter, args| filter =~ /#{dk}/}
 end
 
 puts 'define array logic'
