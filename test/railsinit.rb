@@ -1,6 +1,7 @@
 
 require 'rubygems'
 require 'swapdmi'
+require 'swapdmi/ext/init'
 require 'logger'
 require 'stringio'
 
