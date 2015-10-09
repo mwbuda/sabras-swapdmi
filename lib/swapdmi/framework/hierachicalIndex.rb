@@ -3,31 +3,46 @@
 
 module SwapDmi
 
-	#TODO: integrity errors
-	
-	#TODO: support subkeys
-	# eg if defined entry a,b,c; can also have entry a,b,c,d
-	# acommplish by abolishing nil keys, and using nil as placeholder for entry at depth
+	class HierachicalIndexError < StandardError
+		
+	end
 	
 	class HierarchicalIndex
-			
-		HierachicalIndexError < StandardError
+
+		def self.validateKeys(*keys)
+			tests = [
+				Proc.new {|keys| keys.nil? ? 'nil key set' : nil},
+				Proc.new {|keys| keys.empty? ? 'empty key set' : nil},
+				Proc.new do |keys|
+					ckeys = keys.compact
+					(ckeys.size != keys.size) ? 'nil key set items' : nil
+				end,
+			]
+			tests.each {|test| tv = test.call(keys) ; return tv unless tv.nil?}
+			nil
+		end
+		
+		def self.validKeys?(*keys)
+			!self.validateKeys(*keys).nil?
+		end
 		
 		def initialize()
 			@data = Hash.new {|h,k| h[k] = Hash.new(&h.default_proc)}
 		end
 		
 		def set(keys, v)
+			testKeys = self.class.validateKeys(*keys)
+			raise HierachicalIndexError.new(testKeys) unless testKeys.nil?
+			
 			root = @data
-			ckeys = 
-			keys[0..-2].each {|k| root = root[k]}
-			root[keys[-1]] = v
+			keys.each {|k| root = root[k]}
+			root[nil] = v
 		end
 		
 		def get(ks)
 			root = @data
-			ks[0..-2].each {|k| root = root[k]}
-			root.has_key?(ks[-1]) ? root[ks[-1]] : nil
+			ks.each {|k| root = root[k]}
+			root.has_key?(nil) ? root[nil] : nil
 		end
 		
 		def [](*ks)
@@ -36,8 +51,8 @@ module SwapDmi
 		
 		def has?(*ks)
 			root = @data
-			ks[0..-2].each {|k| root = root[k]}
-			root.has_key?(ks[-1])
+			ks.each {|k| root = root[k]}
+			root.has_key?(nil)
 		end
 		
 	end

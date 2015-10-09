@@ -25,6 +25,7 @@ assertTrue(modelImpl == TestContext.impl)
 puts 'define model impl logic'
 TestModelImpl.define(:test, :data, :set) {|mid,k,v| TestModelData[mid][k] = v}
 TestModelImpl.define(:test, :data, :get) {|mid,k| TestModelData[mid][k] }
+TestModelImpl.define(:test, :data, :get, :deeper) {|mid,k| TestModelData[mid][k] }
 TestModelImpl.define(:test, :data, :list) {|mid| TestModelData[mid].keys }
 
 TestModelImpl.define(:test, :checkScope) do |*args|
@@ -46,6 +47,10 @@ class TestModel < SwapDmi::Model
 	
 	def [](k)
 		self.impl[:test,:data,:get].call(self.id,k)
+	end
+	
+	def deep(k)
+		self.impl[:test,:data,:get,:deeper].call(self.id,k)
 	end
 	
 	def []=(k,v)
@@ -98,9 +103,11 @@ assertTrue(testModelA.impl == TestModelImpl)
 assertTrue(testModelA.dsv == 123)
 testModelA[:a] = 'aa'
 assertTrue(testModelA[:a] == 'aa')
+assertTrue(testModelA.deep(:a) == 'aa')
 assertTrue(testModelA.values.include?(:a))
 testModelA[:b] = 'ab'
 assertTrue(testModelA[:b] == 'ab')
+assertTrue(testModelA.deep(:b) == 'ab')
 assertTrue(testModelA.values.include?(:b))
 
 puts 'test data B'
@@ -112,9 +119,11 @@ assertTrue(testModelB.impl == TestModelImpl)
 assertTrue(testModelB.dsv == 123)
 testModelB[:a] = 'ba'
 assertTrue(testModelB[:a] == 'ba')
+assertTrue(testModelB.deep(:a) == 'ba')
 assertTrue(testModelB.values.include?(:a))
 testModelB[:b] = 'bb'
 assertTrue(testModelB[:b] == 'bb')
+assertTrue(testModelB.deep(:b) == 'bb')
 assertTrue(testModelB.values.include?(:b))		
 	
 puts 'test complete. no problems'
