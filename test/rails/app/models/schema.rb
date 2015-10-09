@@ -11,7 +11,7 @@ module Test
 		end
 	end
 	
-	class TestDataSource < SwapDmi::DataSource
+	class TestDataSource < SwapDmi::SmartDataSource
 		defineDefaultModelType TestModel
 		fetchResolvesNil
 	end
