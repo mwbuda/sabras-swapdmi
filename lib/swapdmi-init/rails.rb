@@ -17,6 +17,9 @@ require 'swapdmi'
 require 'swapdmi/ext/sessionhandle'
 require 'swapdmi/ext/logging'
 
+require 'yaml'
+require 'erb'
+
 #ruby on rails specific required libraries.
 #	we put this in a guard for purposes of testing the extension,
 #	since Rails does not play nice with randomly requiring in components, and we don't want a full rails stack
@@ -129,6 +132,18 @@ module SwapDmi
 			}
 		end
 		
+		def loadConfigSource(env, args = {})
+			cfg = args[:cfg]
+			
+			if cfg.nil?
+				fileLoc = args[:cfg_file]
+				fileLoc = Rails.root.join('config','swapdmi.yml') if fileLoc.nil?
+				cfg = YAML.load(ERB.new(File.read( fileLoc )).result)
+			end
+			
+			cfg[env]
+		end
+		
 		def invoke(args = {})
 			Rails.logger.debug('initializing SwapDmi')
 			
@@ -139,9 +154,7 @@ module SwapDmi
 
 			SwapDmi::LogRegistry.defineDefaultInstance(:rails)
 				
-			xcfg = args[:cfg]
-			xcfg = YAML.load_file( Rails.root.join('config','swapdmi.yml') ) if xcfg.nil?
-			cfg = xcfg[Rails.env]
+			cfg = self.loadConfigSource(Rails.env, args)
 	
 			loadSetDefaults(cfg)
 			loadConfig(SwapDmi::ContextOfUse, 'schema', cfg)
