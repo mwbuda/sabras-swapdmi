@@ -70,6 +70,8 @@ module SwapDmi
 		# will NOT store the model in the cache. this must be done explicitly after touching the model instance
 		#
 		def touchModel(id, modelType = self.class.defaultModelType, xsundry = {})
+			return self.modelCache[modelType][id] if self.modelCache[modelType].has_key?(id) 
+			
 			modelPreInit = self.class.modelPreInit(modelType)
 			params = self.instance_exec(id, &modelPreInit)
 			params.merge!(xsundry) unless xsundry.nil?
