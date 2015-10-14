@@ -69,6 +69,22 @@ module SwapDmi
     end
 
   end
+  
+	class HasCache
+
+	  def self.extend(base)
+		cacheTable = Hash.new do |instances,id|
+		  instances[id] = :default
+		end
+
+	  end
+
+	  def defineCache(cacheId)
+		self.cache[self.id] = cacheId
+		SwapDmi::Cache(id)
+		self
+	  end
+	end
 
 end
 
