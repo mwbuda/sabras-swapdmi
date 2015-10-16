@@ -11,7 +11,7 @@ module SwapDmi
 		#	model cache initialization proc, wh/ will use the other hooks we have on SmartDataSource
 		def self.initModelCache()
 			@defaultBuildModelCache = Proc.new do |modelType| 
-				Hash.new {|models,id| models[id] = self.touchModel(id, modelType) }
+				Hash.new {|models,id| self.touchModel(id, modelType) }
 			end if @defaultBuildModelCache.nil?
 			super
 		end
@@ -80,6 +80,8 @@ module SwapDmi
 			
 			modelPostInit = self.class.modelPostInit(modelType)
 			self.instance_exec(mx, &modelPostInit) unless modelPostInit.nil?
+			
+			self.modelCache[modelType][id] = mx
 			
 			mx
 		end		
