@@ -1,6 +1,9 @@
 
 require 'rubygems'
 require 'swapdmi'
+require 'swapdmi/ext/init'
+require 'logger'
+require 'stringio'
 
 #set up asserts & stuiff
 
@@ -16,11 +19,18 @@ end
 $test = true
 
 #mock rails logger
-class Logger
-
-	def debug(m)
-		nil
+class MockLogger < Logger
+	attr_reader :io
+	
+	def initialize()
+		@io = StringIO.new("")
+		super(@io)
 	end
+	
+	def add(s, m = nil, pn = nil, &block)
+		true
+	end
+	alias :log :add
 
 end
 
@@ -50,7 +60,7 @@ class Rails
 	end
 
 	def self.logger()
-		@logger = Logger.new if @logger.nil?
+		@logger = MockLogger.new if @logger.nil?
 		@logger
 	end
 end
