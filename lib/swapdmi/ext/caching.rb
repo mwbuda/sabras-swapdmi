@@ -43,6 +43,10 @@ module SwapDmi
 			internal[:cacheDate][k] = Time.now
 		end
 		
+		CacheHasKey = Proc.new do |k|
+			internal[:cacheBody].has_key?(k)
+		end
+		
 		CacheEvict = Proc.new do |ks|
 			now = Time.now
 			threshold = self.config[:evictTime]
@@ -373,6 +377,7 @@ module SwapDmi
     end
     
     alias :has_key? :has?
+    alias :hasKey? :has?
 
     # Removes keys from cache automatically
     def evict(*keys)
@@ -430,6 +435,7 @@ module SwapDmi
 	DefaultCache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
 	DefaultCache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
 	DefaultCache.defineGetData(&SwapDmi::DefaultCacheLogic::CacheGet)
+	DefaultCache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
 	DefaultCache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
 	
 	class ModelImpl
