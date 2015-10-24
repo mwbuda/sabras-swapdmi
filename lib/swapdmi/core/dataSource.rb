@@ -31,8 +31,13 @@ module SwapDmi
 				bmc[mt] = allow ? dsourceKlass.defaultModelCacheProc : nil
 			end if @buildModelCache.nil?
 			
-			@defaultBuildModelCache = Proc.new {|modelType| Hash.new } if @defaultBuildModelCache.nil?
+			@defaultBuildModelCache = self.defaultDefaultModelCacheProc if @defaultBuildModelCache.nil?
 			self
+		end
+		
+		# this method provides the default value to use as the default model cache constructor
+		def self.defaultDefaultModelCacheProc()
+			Proc.new {|modelType| Hash.new }
 		end
 		
 		# get default proc used to build model cache for ea. handled type
@@ -95,6 +100,7 @@ module SwapDmi
 		end
 		
 		# if a model type is black listed, then instnaces of itself & subclasses will not be supported
+		#	by the model cache
 		def self.blackListedModelTypes()
 			self.initModelCache
 			@typeBlackList.dup
@@ -162,11 +168,7 @@ module SwapDmi
 		def clearModelCache(*modelTypes)
 			modelTypes = [self.class.modelType] if modelTypes.empty?
 			modelTypes.compact!
-			modelTypes.each do |modelType|
-				mcache = self.modelCache[modelType]
-				next if mcache.nil?
-				mcache.clear
-			end 
+			modelTypes.each {|modelType| self.modelCache.delete(modelType) }
 			self
 		end
 		

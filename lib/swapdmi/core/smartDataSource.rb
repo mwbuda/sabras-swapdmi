@@ -9,11 +9,10 @@ module SwapDmi
 
 		#override the default init model cache behavior, so we have a richer default
 		#	model cache initialization proc, wh/ will use the other hooks we have on SmartDataSource
-		def self.initModelCache()
-			@defaultBuildModelCache = Proc.new do |modelType| 
+		def self.defaultDefaultModelCacheProc()
+			Proc.new do |modelType| 
 				Hash.new {|models,id| self.touchModel(id, modelType) }
-			end if @defaultBuildModelCache.nil?
-			super
+			end
 		end
 		
 		#model init is used to initialize models in the cache
