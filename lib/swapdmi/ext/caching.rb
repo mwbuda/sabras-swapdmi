@@ -261,7 +261,7 @@ module SwapDmi
     extend HasConfig
     extend TrackClassHierarchy
 
-    EvictWhen = [:save,:get]
+    EvictWhen = [:save,:get,:checkHas].freeze
     
     def initialize(id)
 		assignId(id)
@@ -271,7 +271,13 @@ module SwapDmi
     
     def defineEvictWhen(whenKey)
     	raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.includes?(whenKey)
-    	@evictWhen[whenKey] = true
+    	case whenKey
+    		when :all
+    			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
+    		else
+    			@evictWhen[whenKey] = true
+    	end
+    	self
     end
     
     def defineReady(&block)
@@ -311,12 +317,19 @@ module SwapDmi
       @getData = block
       self
     end
+    
+    def defineHas(&block)
+		raise SwapDmi::CacheReconfigureError.new if @readyFlag
+		@checkHas = block
+		self
+    end
 
     #All code is listed down here
     def ready
       return if @readyFlag
       raise SwapDmi::CacheSetupError.new if @save.nil?
       raise SwapDmi::CacheSetupError.new if @getData.nil?
+      self.defineHas {|k| !self.getOne(k).nil? }
       self.instance_exec(&@ready) unless @ready.nil?
       @readyFlag = true
       self
@@ -352,6 +365,14 @@ module SwapDmi
     def [](k)
     	self.getOne(k)
     end
+    
+    def has?(k)
+    	self.ready
+    	self.evict(*ks) if @evictWhen[:checkHas]
+    	self.instance_exec(k, &@checkHas)
+    end
+    
+    alias :has_key? :has?
 
     # Removes keys from cache automatically
     def evict(*keys)
@@ -422,6 +443,54 @@ module SwapDmi
 	class Model
 		def dataCacher
 			self.context.dataCacher
+		end
+	end
+	
+	class DataSource
+		
+		self.singleton_class.send(:alias_method, :basicInitModelCache, :initModelCache)
+		
+		def self.initModelCache()
+			@modelToCache = Hash.new {|h,k| h[k] = :default} if @modelToCache.nil?
+			self.basicInitModelCache()
+		end
+		
+		def self.assignModelCacheForType(cacheId, modelType = self.defaultModelType)
+			self.initModelCache
+			@modelToCache[modelType] = cacheId
+			self
+		end
+		
+		def self.modelCacheIdForType(modelType = self.defaultModelType)
+			@modelToCache[modelType]
+		end
+		
+		def self.defaultDefaultModelCacheProc()
+			dataSource = self
+			Proc.new do |modelType|
+				mtype = modelType
+				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
+					dataSource.modelCacheIdForType(mtype)
+				end
+			end
+		end
+		
+	end
+	
+	class SmartDataSource
+
+		def self.defaultDefaultModelCacheProc()
+			dataSource = self
+			Proc.new do |modelType|
+				mtype = modelType
+				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
+					dataSource.modelCacheIdForType(mtype)
+				end
+				
+				proxy.withProxyPreFilter(:[]) do |k|
+					dataSource.touchModel(mtype, k)
+				end
+			end
 		end
 	end
 	
