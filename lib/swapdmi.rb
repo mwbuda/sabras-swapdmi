@@ -7,6 +7,7 @@
 # 
 require 'swapdmi/framework/base'
 require 'swapdmi/framework/hierachicalIndex'
+require 'swapdmi/framework/proxy'
 
 # core components are the main components of the library
 #	they are the basic building blocks an API user will use
