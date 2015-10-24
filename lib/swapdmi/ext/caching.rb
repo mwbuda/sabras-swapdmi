@@ -3,6 +3,15 @@ module SwapDmi
 
 	module DefaultCacheLogic
 
+		def self.configure(cache)
+			cache.defineReady(&SwapDmi::DefaultCacheLogic::CacheReady)
+			cache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
+			cache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
+			cache.defineGetData(&SwapDmi::DefaultCacheLogic::CacheGet)
+			cache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
+			cache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
+		end
+		
 		CacheKeyValidValue = Proc.new do |ki|
 			case ki
 				when SwapDmi::CacheKey::Wildcard then false
@@ -431,12 +440,8 @@ module SwapDmi
 	DefaultCacheKeySchema = SwapDmi::CacheKeySchema.new(:default)
   
 	DefaultCache = SwapDmi::Cache.new(:default)
-	DefaultCache.defineReady(&SwapDmi::DefaultCacheLogic::CacheReady)
-	DefaultCache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
-	DefaultCache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
-	DefaultCache.defineGetData(&SwapDmi::DefaultCacheLogic::CacheGet)
-	DefaultCache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
-	DefaultCache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
+	SwapDmi::DefaultCacheLogic.configure(DefaultCache)
+	
 	
 	class ModelImpl
 		extend HasCache
