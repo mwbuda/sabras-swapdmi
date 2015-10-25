@@ -18,7 +18,45 @@ end
 puts 'Checking if extension has loaded - Caching Extension'
 throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 
+#cache key matching (default setup)
+
 #check cache readying
+	#TODO
+
+	#exact match, main key
+
+	#exact match, w/ tags
+
+	#wildcard match, main key
+
+	#wild card match, main key, spec tags
+
+	#wild card match, tags, spec main key
+
+	#raw main key exact match
+	assertTrue( 
+		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, :raw)
+	)
+	assertFalse( 
+		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, :wrong)
+	)
+	assertFalse( 
+		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:wrong, :raw)
+	)
+
+	#raw main key wildcard match
+	assertTrue( 
+		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(SwapDmi::CacheKey::Wildcard, :raw)
+	)
+	assertTrue( 
+		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, SwapDmi::CacheKey::Wildcard)
+	)
+
+	#check valid id
+	assertFalse( SwapDmi::CacheKey.wildcard.validId? )
+	assertTrue( SwapDmi::CacheKey.new(:key).validId? )
+	assertTrue( SwapDmi::CacheKey.new(1).validId? )
+	assertTrue( SwapDmi::CacheKey.new('key').validId? )
 
 #	can't use cache w/ out def save & get
 	did_bork = false
@@ -48,15 +86,27 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 	DefaultCache = SwapDmi::Cache.default
 	DefaultCache.defineEvictWhen(:all)
 	
-#	cache key matching
-	#TODO
-	
 #	data in, data out 
-	#TODO
+	DefaultCache.save(:key0, 0)
+	assertTrue(DefaultCache.has?(:key0))
+	assertTrue(DefaultCache.getOne(:key0) == 0)
+	
+	testGetAll = {
+		:key1 => 1,
+		:key2 => 2,
+		:key3 => 3,
+		:key4 => 4
+	}
+	testGetAll.each {|k,v|  DefaultCache.save(k,v) }
+	res = DefaultCache.get(*testGetAll.keys)
+	testGetAll.each {|k,v| assertTrue(res[k] == v) }
 
 #	eviction (evict time = 0)
 	DefaultCache.config[:evictTime] = 0
-	#TODO
+	toEvict = [:key0] + testGetAll.keys
+	res = DefaultCache.get(SwapDmi::CacheKey::Wildcard)
+	assertTrue( res.empty? )
+	toEvict.each {|k| assertTrue( DefaultCahce[k].nil? )}
 
 # Test is completed - Output stuff
 puts 'Caching Test Completed'
