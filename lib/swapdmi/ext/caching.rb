@@ -7,7 +7,7 @@ module SwapDmi
 			cache.defineReady(&SwapDmi::DefaultCacheLogic::CacheReady)
 			cache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
 			cache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
-			cache.defineGetData(&SwapDmi::DefaultCacheLogic::CacheGet)
+			cache.defineGet(&SwapDmi::DefaultCacheLogic::CacheGet)
 			cache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
 			cache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
 		end
@@ -23,14 +23,14 @@ module SwapDmi
 		CacheKeyValidId = Proc.new do |k|
 			case k
 				when SwapDmi::CacheKey then k.isValid?
-				else SwapDmi::DefaultCacheLogic::CacheKeyValidValue.call(ki) 
+				else SwapDmi::DefaultCacheLogic::CacheKeyValidValue.call(k) 
 			end
 		end
 		
 		CacheKeyClean = Proc.new do |ki|
 			case ki
 				when Numeric then ki
-				else ki.to_s.downcase.trim.to_sym 
+				else ki.to_s.downcase.strip.to_sym 
 			end
 		end
 		
@@ -43,8 +43,14 @@ module SwapDmi
 				Proc.new {|a,b| b == SwapDmi::CacheKey::Wildcard}, 
 			]
 		
-			matches = conds.map {|cond| cond.call(ka,kb)}
-			matches.includes?(true)
+			matches = conds.map do |cond| 
+				begin
+					cond.call(ka,kb)
+				rescue
+					false
+				end
+			end
+			matches.include?(true)
 		end
 		
 		CacheSave = Proc.new do |k, data|
@@ -215,7 +221,7 @@ module SwapDmi
     
     def initialize(k, schema = SwapDmi::CacheKeySchema.default)
     	@schema = schema
-    	@mainKey = @schema.cleanKey(k)
+    	@mainKey = @schema.cleanMainKey(k)
     	@tags = []
     end
     
@@ -278,7 +284,7 @@ module SwapDmi
     extend HasConfig
     extend TrackClassHierarchy
 
-    EvictWhen = [:save,:get,:checkHas].freeze
+    EvictWhen = [:save,:get,:checkHas,:all].freeze
     
     def initialize(id)
 		assignId(id)
@@ -287,7 +293,7 @@ module SwapDmi
     end
     
     def defineEvictWhen(whenKey)
-    	raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.includes?(whenKey)
+    	raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.include?(whenKey)
     	case whenKey
     		when :all
     			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
@@ -377,7 +383,7 @@ module SwapDmi
     
     def getOne(k)
     	res = self.get(k)
-    	res.empty ? nil : res[0]
+    	res.empty? ? nil : res[0]
     end
     def [](k)
     	self.getOne(k)
@@ -385,7 +391,7 @@ module SwapDmi
     
     def has?(k)
     	self.ready
-    	self.evict(*ks) if @evictWhen[:checkHas]
+    	self.evict(k) if @evictWhen[:checkHas]
     	self.instance_exec(k, &@checkHas)
     end
     
