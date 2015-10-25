@@ -89,7 +89,7 @@ module SwapDmi
 		end
 		
 		CacheGet = Proc.new do |ks|
-			results = []
+			results = {}
 			ks.each do |k|
 				isKyFull = k.kind_of?(SwapDmi::CacheKey)
 				
@@ -105,11 +105,11 @@ module SwapDmi
 						SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
 					end
 					
-					results << xk if match
+					results[xk]= internal[:cacheBody][xk] if match
 				end
 			end
 				
-			results.map {|k| internal[:cacheBody][k] }
+			results
 		end
 		
 		CacheReady = Proc.new do
@@ -208,6 +208,10 @@ module SwapDmi
     attr_reader :mainKey, :schema
 
     Wildcard = '*'.to_sym
+    
+    def self.wildcard()
+    	self.new(SwapDmi::CacheKey::Wildcard)
+    end
     
     def initialize(k, schema = SwapDmi::CacheKeySchema.default)
     	@schema = schema
