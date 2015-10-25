@@ -21,17 +21,21 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 #cache key matching (default setup)
 
 #check cache readying
+	
+	#exact match, main key
 	#TODO
 
-	#exact match, main key
-
 	#exact match, w/ tags
+	#TODO
 
 	#wildcard match, main key
+	#TODO
 
 	#wild card match, main key, spec tags
+	#TODO
 
 	#wild card match, tags, spec main key
+	#TODO
 
 	#raw main key exact match
 	assertTrue( 
@@ -98,15 +102,15 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 		:key4 => 4
 	}
 	testGetAll.each {|k,v|  DefaultCache.save(k,v) }
-	res = DefaultCache.get(*testGetAll.keys)
+	res = DefaultCache.getMany(*testGetAll.keys)
 	testGetAll.each {|k,v| assertTrue(res[k] == v) }
 
 #	eviction (evict time = 0)
 	DefaultCache.config[:evictTime] = 0
 	toEvict = [:key0] + testGetAll.keys
-	res = DefaultCache.get(SwapDmi::CacheKey::Wildcard)
+	res = DefaultCache.getMany(SwapDmi::CacheKey::Wildcard)
 	assertTrue( res.empty? )
-	toEvict.each {|k| assertTrue( DefaultCahce[k].nil? )}
+	toEvict.each {|k| assertTrue( DefaultCache[k].nil? )}
 
 # Test is completed - Output stuff
 puts 'Caching Test Completed'

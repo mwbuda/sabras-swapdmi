@@ -7,7 +7,8 @@ module SwapDmi
 			cache.defineReady(&SwapDmi::DefaultCacheLogic::CacheReady)
 			cache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
 			cache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
-			cache.defineGet(&SwapDmi::DefaultCacheLogic::CacheGet)
+			cache.defineGetMany(&SwapDmi::DefaultCacheLogic::CacheGetMany)
+			cache.defineGetOne(&SwapDmi::DefaultCacheLogic::CacheGetOne)
 			cache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
 			cache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
 		end
@@ -59,7 +60,7 @@ module SwapDmi
 		end
 		
 		CacheHasKey = Proc.new do |k|
-			internal[:cacheBody].has_key?(k)
+			!self.getOne(k).nil?
 		end
 		
 		CacheEvict = Proc.new do |ks|
@@ -89,12 +90,16 @@ module SwapDmi
 						SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
 					end
 					
-					internal[:cacheBody].remove(xk) if match
+					internal[:cacheBody].delete(xk) if match
 				end 
 			end end
 		end
 		
-		CacheGet = Proc.new do |ks|
+		CacheGetOne = Proc.new do |k|
+			self.getMany(k)[k]
+		end
+		
+		CacheGetMany = Proc.new do |ks|
 			results = {}
 			ks.each do |k|
 				isKyFull = k.kind_of?(SwapDmi::CacheKey)
@@ -335,9 +340,9 @@ module SwapDmi
       self
     end
 
-    def defineGet(&block)
+    def defineGetMany(&block)
 	  raise SwapDmi::CacheReconfigureError.new if @readyFlag
-      @getData = block
+      @getMany = block
       self
     end
     
@@ -346,12 +351,19 @@ module SwapDmi
 		@checkHas = block
 		self
     end
+    
+    def defineGetOne(&block)
+		raise SwapDmi::CacheReconfigureError.new if @readyFlag
+		@getOne = block
+		self
+    end
 
     #All code is listed down here
     def ready
       return if @readyFlag
       raise SwapDmi::CacheSetupError.new if @save.nil?
-      raise SwapDmi::CacheSetupError.new if @getData.nil?
+      raise SwapDmi::CacheSetupError.new if @getMany.nil?
+	  raise SwapDmi::CacheSetupError.new if @getOne.nil?
       self.defineHas {|k| !self.getOne(k).nil? }
       self.instance_exec(&@ready) unless @ready.nil?
       @readyFlag = true
@@ -375,15 +387,16 @@ module SwapDmi
     end
 
     # Retrieves the data from the cache
-    def get(*ks)
+    def getMany(*ks)
 	  self.ready
       self.evict(*ks) if @evictWhen[:get]
-      self.instance_exec(ks, &@getData)
+      self.instance_exec(ks, &@getMany)
     end
     
     def getOne(k)
-    	res = self.get(k)
-    	res.empty? ? nil : res[0]
+		self.ready
+		self.evict(k) if @evictWhen[:get]
+		self.instance_exec(k, &@getOne)
     end
     def [](k)
     	self.getOne(k)
