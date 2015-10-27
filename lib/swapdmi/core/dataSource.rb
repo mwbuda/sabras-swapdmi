@@ -175,10 +175,19 @@ module SwapDmi
 		# fetch a model from the cache
 		#	if you are not resolving nil for the type, then will return nil if not previously manually touched/cached
 		def fetchModel(id, type = self.class.defaultModelType)
-			mcache = self.modelCache[model.class]
+			mcache = self.modelCache[type]
 			throw :unsupportedType if mcache.nil?
-			mcache[type][id]
+			mcache[id]
 		end
+		
+		def hasModel?(id, type = self.class.defaultModelType)
+			mcache = self.modelCache[type]
+			throw :unsupportedType if mcache.nil?
+			return mcache.has_key?(id)
+		end
+		
+		alias :has? :hasModel?
+		alias :has_key? :hasModel? 
 		
 		def [](id, type = self.class.defaultModelType)
 			self.fetchModel(id,type)
