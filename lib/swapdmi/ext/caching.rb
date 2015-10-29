@@ -96,7 +96,13 @@ module SwapDmi
 		end
 		
 		CacheGetOne = Proc.new do |k|
-			self.getMany(k)[k]
+			if k == SwapDmi::CacheKey::Wildcard
+				all = self.getMany(k)
+				fk = all.keys[0]
+				all[fk]
+			else 
+				self.getMany(k)[k]
+			end
 		end
 		
 		CacheGetMany = Proc.new do |ks|
@@ -485,28 +491,33 @@ module SwapDmi
 		self.singleton_class.send(:alias_method, :basicInitModelCache, :initModelCache)
 		
 		def self.initModelCache()
-			@modelToCache = Hash.new {|h,k| h[k] = :default} if @modelToCache.nil?
+			@cacheIdConfigMapping = {}
 			self.basicInitModelCache()
 		end
 		
-		def self.assignModelCacheForType(cacheId, modelType = self.defaultModelType)
+		def self.modelCacheIdConfigKey(modelType = self.defaultModelType)
+			@cacheIdConfigMapping[modelType]
+		end
+		
+		def self.mapModelCacheIdToConfig(configKey, modelType = self.defaultModelType)
 			self.initModelCache
-			@modelToCache[modelType] = cacheId
+			@cacheIdConfigMapping[modelType] = configKey
 			self
 		end
 		
-		def self.modelCacheIdForType(modelType = self.defaultModelType)
-			@modelToCache[modelType]
-		end
-		
 		def self.defaultDefaultModelCacheProc()
-			dataSource = self
 			Proc.new do |modelType|
 				mtype = modelType
-				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dataSource.modelCacheIdForType(mtype)
+				dsource = self
+				SwapDmi::ProxyObject.new(SwapDmi::Cache) do
+					dsource.modelCacheIdForType(mtype)
 				end
 			end
+		end
+		
+		def modelCacheIdForType(modelType = self.class.defaultModelType)
+			configKey = self.class.modelCacheIdConfigKey(modelType)
+			self.config[configKey]
 		end
 		
 	end
@@ -514,18 +525,22 @@ module SwapDmi
 	class SmartDataSource
 
 		def self.defaultDefaultModelCacheProc()
-			dataSource = self
 			Proc.new do |modelType|
 				mtype = modelType
+				dsource = self
+				
 				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dataSource.modelCacheIdForType(mtype)
+					dsource.modelCacheIdForType(mtype)
 				end
 				
 				proxy.withProxyPreFilter(:[]) do |k|
-					dataSource.touchModel(mtype, k)
+					dsource.touchModel(k, mtype)
 				end
+				
+				proxy
 			end
 		end
+		
 	end
 	
 end

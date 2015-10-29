@@ -1,5 +1,4 @@
 
-
 module SwapDmi
 	
 	# a very basic proxy object to setup dynamic delegate behavior
@@ -35,7 +34,7 @@ module SwapDmi
 		def method_missing(method, *args, &proc)
 			filter = @filters[method]
 			self.instance_exec(method, *args, &filter) unless filter.nil?
-			self.proxyObjectDelegate().send(method, *args, &proc) 
+			self.proxyObjectDelegate.send(method, *args, &proc) 
 		end 
 	end
 	

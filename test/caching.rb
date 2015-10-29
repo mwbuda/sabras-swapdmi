@@ -19,8 +19,7 @@ puts 'Checking if extension has loaded - Caching Extension'
 throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 
 #cache key matching (default setup)
-
-#check cache readying
+puts 'test cache key matching'
 	
 	#exact match, main key
 	#TODO
@@ -63,6 +62,8 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 	assertTrue( SwapDmi::CacheKey.new('key').validId? )
 
 #	can't use cache w/ out def save & get
+puts 'test must define save & get on cache'
+	
 	did_bork = false
 	BorkedCache = SwapDmi::Cache.new(:borked)
 	begin
@@ -73,6 +74,8 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 	assertTrue(did_bork)
 
 #	ready cache, ensure can't reconfigure
+puts 'test cant reconfigure'
+
 	TestCantReconfigCache = SwapDmi::Cache.new(:testCantReconfig)
 	SwapDmi::DefaultCacheLogic.configure(TestCantReconfigCache)
 	TestCantReconfigCache.ready
@@ -86,14 +89,16 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 	assertTrue(did_bork)
 
 #check the default cache logic
-
+puts 'test default cache logic thru proxy'
+	
 	DefaultCache = SwapDmi::Cache.default
 	DefaultCache.defineEvictWhen(:all)
+	DefaultCacheProxy = SwapDmi::ProxyObject.new(SwapDmi::Cache, :default)
 	
 #	data in, data out 
-	DefaultCache.save(:key0, 0)
-	assertTrue(DefaultCache.has?(:key0))
-	assertTrue(DefaultCache.getOne(:key0) == 0)
+	DefaultCacheProxy.save(:key0, 0)
+	assertTrue(DefaultCacheProxy.has?(:key0))
+	assertTrue(DefaultCacheProxy.getOne(:key0) == 0)
 	
 	testGetAll = {
 		:key1 => 1,
@@ -101,14 +106,19 @@ throw :assertExtension unless SwapDmi.hasExtensions?(:caching)
 		:key3 => 3,
 		:key4 => 4
 	}
-	testGetAll.each {|k,v|  DefaultCache.save(k,v) }
-	res = DefaultCache.getMany(*testGetAll.keys)
+	testGetAll.each {|k,v|  DefaultCacheProxy.save(k,v) }
+	res = DefaultCacheProxy.getMany(*testGetAll.keys)
+	testGetAll.each {|k,v| assertTrue(res[k] == v) }
+	res = res = DefaultCacheProxy.getMany(SwapDmi::CacheKey::Wildcard)
 	testGetAll.each {|k,v| assertTrue(res[k] == v) }
 
+	assertTrue( DefaultCacheProxy.has?(SwapDmi::CacheKey::Wildcard) )
+	testGetAll.keys.each {|k| assertTrue(DefaultCacheProxy.has?(k) ) }
+		
 #	eviction (evict time = 0)
-	DefaultCache.config[:evictTime] = 0
+	DefaultCacheProxy.config[:evictTime] = 0
 	toEvict = [:key0] + testGetAll.keys
-	res = DefaultCache.getMany(SwapDmi::CacheKey::Wildcard)
+	res = DefaultCacheProxy.getMany(SwapDmi::CacheKey::Wildcard)
 	assertTrue( res.empty? )
 	toEvict.each {|k| assertTrue( DefaultCache[k].nil? )}
 
