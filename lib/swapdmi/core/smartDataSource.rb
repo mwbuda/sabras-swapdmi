@@ -90,7 +90,7 @@ module SwapDmi
 			throw :unsupportedType if mcache.nil?
 			if self.class.fetchResolvesNil?(type)
 				mcache[id]
-			elsif !mcache.keys.include?(id)
+			elsif !mcache.has_key?(id)
 				nil
 			else
 				mcache[id]
