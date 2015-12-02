@@ -198,8 +198,10 @@ module SwapDmi
 			rawCfg = cfg[cfgKey].nil? ? {} : cfg[cfgKey]
 			allCfg.merge!(rawCfg)
 			allCfg.each do |k,xcfg|
-				Rails.logger.debug("SwapDmi:\t--> #{cfgroot} = #{k}") 
-				klass.config(k.to_s.to_sym).merge!(xcfg)
+				ck = k.to_s.to_sym
+				cfgBody = klass.config(ck)
+				cfgBody.merge!(xcfg)
+				cfgBody.each {|xcfgk,v| Rails.logger.debug("SwapDmi - Config:\t--> #{cfgroot}.#{ck}.#{xcfgk} = #{v}") } 
 			end
 		end
 		
