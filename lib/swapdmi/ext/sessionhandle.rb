@@ -217,10 +217,16 @@ module SwapDmi
 		protected :sessionHandling
 		
 	end
-		
+
+	SwapDmi.addHookForExtension('integrate logging with session handling', :sessionhandle, :logging) do
+		class SwapDmi::SessionHandling
+			extend HasLog
+		end
+	end
+
+	SwapDmi.activateExtensionHooks(:sessionhandle)
+	
 end
-
-
 
 
 

@@ -107,11 +107,6 @@ module SwapDmi
 			self.context.log(m)
 		end
 	end
-
-	if SwapDmi.hasExtensions?(:sessionhandle)
-		class SessionHandling
-			extend HasLog
-		end
-	end
 	
+	SwapDmi.activateExtensionHooks(:logging)
 end

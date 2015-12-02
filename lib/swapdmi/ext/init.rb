@@ -2,12 +2,14 @@
 
 
 #
-# cdoe for initializing & setting up SwapDMI, including the dynamic loading based Initializer system
+# code for initializing & setting up SwapDMI, including the dynamic loading based Initializer system
 #
 #
 #
 
 module SwapDmi
+	
+	SwapDmi.declareExtension(:init)
 	
 	#
 	# this class is used to define initializers for the framework itself,
@@ -53,6 +55,8 @@ module SwapDmi
 			throw 'unimplemented SwapDmi initialization'
 		end
 	end
+	
+	SwapDmi.activateExtensionHooks(:init)
 	
 end
 
