@@ -16,7 +16,7 @@ module SwapDmi
 		end
 		
 		def signal!(id)
-			return false unless @appliesFor.includes?(id)
+			return false unless @appliesFor.include?(id)
 			return false unless SwapDmi.hasExtensions?(*@appliesFor)
 			
 			begin
@@ -42,7 +42,7 @@ module SwapDmi
 	
 	def self.activateExtensionHooks(id)
 		SwapDmi::ExtensionHooks.each do |hook|
-			next unless hook.appliesFor.includes?(id)
+			next unless hook.appliesFor.include?(id)
 			hook.signal!(id)
 		end
 		self
