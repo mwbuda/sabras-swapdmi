@@ -1,222 +1,78 @@
 module SwapDmi
 	SwapDmi.declareExtension(:caching)
-
-	module DefaultCacheLogic
-
-		def self.configure(cache)
-			cache.defineReady(&SwapDmi::DefaultCacheLogic::CacheReady)
-			cache.defineSave(&SwapDmi::DefaultCacheLogic::CacheSave)
-			cache.defineValidId(&SwapDmi::DefaultCacheLogic::CacheKeyValidId)
-			cache.defineGetMany(&SwapDmi::DefaultCacheLogic::CacheGetMany)
-			cache.defineGetOne(&SwapDmi::DefaultCacheLogic::CacheGetOne)
-			cache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
-			cache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
-		end
-		
-		CacheKeyValidValue = Proc.new do |ki|
-			case ki
-				when SwapDmi::CacheKey::Wildcard then false
-				when nil then false
-				else true 
-			end
-		end
-		
-		CacheKeyValidId = Proc.new do |k|
-			case k
-				when SwapDmi::CacheKey then k.isValid?
-				else SwapDmi::DefaultCacheLogic::CacheKeyValidValue.call(k) 
-			end
-		end
-		
-		CacheKeyClean = Proc.new do |ki|
-			case ki
-				when Numeric then ki
-				else ki.to_s.downcase.strip.to_sym 
-			end
-		end
-		
-		CacheKeyCompare = Proc.new do |ka,kb|
-			conds = [
-				Proc.new {|a,b| a == b},
-				Proc.new {|a,b| a.to_s =~ /#{b.to_s}/i},
-				Proc.new {|a,b| b.to_s =~ /#{a.to_s}/i},
-				Proc.new {|a,b| a == SwapDmi::CacheKey::Wildcard},
-				Proc.new {|a,b| b == SwapDmi::CacheKey::Wildcard}, 
-			]
-		
-			matches = conds.map do |cond| 
-				begin
-					cond.call(ka,kb)
-				rescue
-					false
-				end
-			end
-			matches.include?(true)
-		end
-		
-		CacheSave = Proc.new do |k, data|
-			internal[:cacheBody][k] = data
-			internal[:cacheDate][k] = Time.now
-		end
-		
-		CacheHasKey = Proc.new do |k|
-			!self.getOne(k).nil?
-		end
-		
-		CacheEvict = Proc.new do |ks|
-			now = Time.now
-			threshold = self.config[:evictTime]
-			toSkip = []
-			unless threshold.nil?
-			ks.each do |k| 
-				isKyFull = k.kind_of?(SwapDmi::CacheKey)
-			
-				internal[:cacheBody].keys.each do |xk|
-					next if toSkip.include?(xk)
-					
-					time = internal[:cacheDate][xk]
-					if (now - time) < threshold
-						toSkip << xk
-						next
-					end
-					 
-					isXkyFull = xk.kind_of?(SwapDmi::CacheKey)
-					
-					match = if isKyFull
-						k =~ xk
-					elsif isXkyFull
-						xk.matchMainKey(k)	
-					else
-						SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
-					end
-					
-					internal[:cacheBody].delete(xk) if match
-				end 
-			end end
-		end
-		
-		CacheGetOne = Proc.new do |k|
-			if k == SwapDmi::CacheKey::Wildcard
-				all = self.getMany(k)
-				fk = all.keys[0]
-				all[fk]
-			else 
-				self.getMany(k)[k]
-			end
-		end
-		
-		CacheGetMany = Proc.new do |ks|
-			results = {}
-			ks.each do |k|
-				isKyFull = k.kind_of?(SwapDmi::CacheKey)
-				
-				internal[:cacheBody].keys.each do |xk|
-					next if results.include?(xk)
-					isXkyFull = xk.kind_of?(SwapDmi::CacheKey)
-					
-					match = if isKyFull
-						k =~ xk
-					elsif isXkyFull
-						xk.matchMainKey(k)	
-					else
-						SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
-					end
-					
-					results[xk]= internal[:cacheBody][xk] if match
-				end
-			end
-				
-			results
-		end
-		
-		CacheReady = Proc.new do
-			self.defineInternalData(:cacheBody, {})
-			self.defineInternalData(:cacheDate, {})
-		end
-  	end
   
   # this class is used along with CacheKey for custom
   #		match/keying semantics w/i a cache.
   class CacheKeySchema
-	extend TrackClassHierarchy
+		extend TrackClassHierarchy
 	
-	def initialize(id)
-		self.assignId(id)
-		
-		@mainKeyClean = SwapDmi::DefaultCacheLogic::CacheKeyClean
-		@tagClean = SwapDmi::DefaultCacheLogic::CacheKeyClean
-		
-		@mainKeyCompare = SwapDmi::DefaultCacheLogic::CacheKeyCompare
-		@tagCompare = SwapDmi::DefaultCacheLogic::CacheKeyCompare
-		
-		@mainKeyValid = SwapDmi::DefaultCacheLogic::CacheKeyValidValue
-		@tagValid = SwapDmi::DefaultCacheLogic::CacheKeyValidValue
-	end
-	
-	def defineMainKeyClean(&block)
-		@mainKeyClean = block
-		self
-	end
-	def defineMainKeyCompare(&block)
-		@mainKeyCompare = block
-		self
-	end
-	def defineMainKeyValid(&block)
-		@mainKeyValid = block
-		self
-	end
-	
-	def defineTagClean(&block)
-		@tagClean = block
-		self
-	end
-	def defineTagCompare(&block)
-		@tagCompare = block
-		self
-	end
-	def defineTagValid(&block)
-		@tagValid = block
-		self
-	end
-	
-	def cleanMainKey(k)
-		@mainKeyClean.call(k)
-	end
-	
-	def cleanTags(*tags)
-		tags.map {|tag| @tagClean.call(tag)}
-	end
-	
-	def compareMainKeys(ak,bk)
-		@mainTagCompare.call(ak,bk)
-	end
-	
-	def compareTags(atags, btags)
-		results = []
-		uatags = atags.uniq
-		ubtags = btags.uniq
-		
-		uatags.each do |atag|
-			found = false
-			ubtags do |btag|
-				found = @tagCompare.call(atag,btag)
-				break if found
-			end
-			return false unless found
+		def initialize(id)
+			self.assignId(id)
 		end
+	
+		def defineMainKeyClean(&block)
+			@mainKeyClean = block
+			self
+		end
+		def defineMainKeyCompare(&block)
+			@mainKeyCompare = block
+			self
+		end
+		def defineMainKeyValid(&block)
+			@mainKeyValid = block
+			self
+		end
+	
+		def defineTagClean(&block)
+			@tagClean = block
+			self
+		end
+		def defineTagCompare(&block)
+			@tagCompare = block
+			self
+		end
+		def defineTagValid(&block)
+			@tagValid = block
+			self
+		end
+	
+		def cleanMainKey(k)
+			@mainKeyClean.call(k)
+		end
+	
+		def cleanTags(*tags)
+			tags.map {|tag| @tagClean.call(tag)}
+		end
+	
+		def compareMainKeys(ak,bk)
+			@mainTagCompare.call(ak,bk)
+		end
+	
+		def compareTags(atags, btags)
+			results = []
+			uatags = atags.uniq
+			ubtags = btags.uniq
 			
-		true
-	end
+			uatags.each do |atag|
+				found = false
+				ubtags do |btag|
+					found = @tagCompare.call(atag,btag)
+					break if found
+				end
+				return false unless found
+			end
+				
+			true
+		end
 	
-	def validMainKey?(k)
-		@mainKeyValid.call(k)
-	end
+		def validMainKey?(k)
+			@mainKeyValid.call(k)
+		end
 	
-	def validTags?(*tags)
-		tags.each {|tag| return false unless @tagValid.call(tag) }
-		true
-	end
-		
+		def validTags?(*tags)
+			tags.each {|tag| return false unless @tagValid.call(tag) }
+			true
+		end
   end
   
   #this class is used to key things in a cache, supporting
@@ -225,6 +81,15 @@ module SwapDmi
     attr_reader :mainKey, :schema
 
     Wildcard = '*'.to_sym
+    
+    def self.wildcard?(x)
+    	case x
+    		when Wildcard then true
+    		when Wildcard.to_s then true
+    		when self.wildcard then true
+    		else false
+    	end
+    end
     
     def self.wildcard()
     	self.new(SwapDmi::CacheKey::Wildcard)
@@ -298,7 +163,7 @@ module SwapDmi
     EvictWhen = [:save,:get,:checkHas,:all].freeze
     
     def initialize(id)
-		assignId(id)
+			assignId(id)
     	@internal = {}
     	@evictWhen = {}
     end
@@ -322,46 +187,46 @@ module SwapDmi
 
     #All defines are listed up here
     def defineEviction(&block)
-	  raise SwapDmi::CacheReconfigureError.new if @readyFlag
+	  	raise SwapDmi::CacheReconfigureError.new if @readyFlag
       @evict = block
       self
     end
 
     def defineInternalData(key, object)
-	  raise SwapDmi::CacheReconfigureError.new if @readyFlag
+	  	raise SwapDmi::CacheReconfigureError.new if @readyFlag
       @internal[key] = object
       self
     end
 
     def defineValidId(&block)
-		raise SwapDmi::CacheReconfigureError.new if @readyFlag
+			raise SwapDmi::CacheReconfigureError.new if @readyFlag
     	@validId = block
     	self
     end
     
     #defines the save block
     def defineSave(&block)
-	  raise SwapDmi::CacheReconfigureError.new if @readyFlag
+	  	raise SwapDmi::CacheReconfigureError.new if @readyFlag
       @save = block
       self
     end
 
     def defineGetMany(&block)
-	  raise SwapDmi::CacheReconfigureError.new if @readyFlag
+	  	raise SwapDmi::CacheReconfigureError.new if @readyFlag
       @getMany = block
       self
     end
     
     def defineHas(&block)
-		raise SwapDmi::CacheReconfigureError.new if @readyFlag
-		@checkHas = block
-		self
+			raise SwapDmi::CacheReconfigureError.new if @readyFlag
+			@checkHas = block
+			self
     end
     
     def defineGetOne(&block)
-		raise SwapDmi::CacheReconfigureError.new if @readyFlag
-		@getOne = block
-		self
+			raise SwapDmi::CacheReconfigureError.new if @readyFlag
+			@getOne = block
+			self
     end
 
     #All code is listed down here
@@ -369,8 +234,8 @@ module SwapDmi
       return if @readyFlag
       raise SwapDmi::CacheSetupError.new if @save.nil?
       raise SwapDmi::CacheSetupError.new if @getMany.nil?
-	  raise SwapDmi::CacheSetupError.new if @getOne.nil?
-      self.defineHas {|k| !self.getOne(k).nil? }
+			raise SwapDmi::CacheSetupError.new if @getOne.nil?
+      @checkHas = Proc.new {|k| !self.getOne(k).nil? } if @checkHas.nil?
       self.instance_exec(&@ready) unless @ready.nil?
       @readyFlag = true
       self
@@ -381,7 +246,7 @@ module SwapDmi
       self.ready
       
       unless @validId.nil?
-		raise SwapDmi::CacheSaveError.new(key) unless self.instance_exec(key, &@validId)
+				raise SwapDmi::CacheSaveError.new(key) unless self.instance_exec(key, &@validId)
       end
       
       self.evict(key) if @evictWhen[:save]
@@ -394,21 +259,22 @@ module SwapDmi
 
     # Retrieves the data from the cache
     def getMany(*ks)
-	  self.ready
+	  	self.ready
       self.evict(*ks) if @evictWhen[:get]
       self.instance_exec(ks, &@getMany)
     end
     
     def getOne(k)
-		self.ready
-		self.evict(k) if @evictWhen[:get]
-		self.instance_exec(k, &@getOne)
+			self.ready
+			self.evict(k) if @evictWhen[:get]
+			self.instance_exec(k, &@getOne)
     end
     def [](k)
     	self.getOne(k)
     end
     
     def has?(k)
+    	Rails.logger.debug("Cache Call Has: #{k}")
     	self.ready
     	self.evict(k) if @evictWhen[:checkHas]
     	self.instance_exec(k, &@checkHas)
@@ -419,7 +285,7 @@ module SwapDmi
 
     # Removes keys from cache automatically
     def evict(*keys)
-	  self.ready
+	  	self.ready
       self.instance_exec(keys, &@evict) unless @evict.nil?
       self
     end
@@ -466,82 +332,9 @@ module SwapDmi
 		end
 	end
 	
-	DefaultCacheKeySchema = SwapDmi::CacheKeySchema.new(:default)
-  
-	DefaultCache = SwapDmi::Cache.new(:default)
-	SwapDmi::DefaultCacheLogic.configure(DefaultCache)
-	
-	
-	class ModelImpl
-		extend HasCache
-	end
-	
-	class ContextOfUse
-		extend HasCache
-	end
-	
-	class Model
-		def dataCacher
-			self.context.dataCacher
-		end
-	end
-	
-	class DataSource
-		
-		self.singleton_class.send(:alias_method, :basicInitModelCache, :initModelCache)
-		
-		def self.initModelCache()
-			@cacheIdConfigMapping = {}
-			self.basicInitModelCache()
-		end
-		
-		def self.modelCacheIdConfigKey(modelType = self.defaultModelType)
-			@cacheIdConfigMapping[modelType]
-		end
-		
-		def self.mapModelCacheIdToConfig(configKey, modelType = self.defaultModelType)
-			self.initModelCache
-			@cacheIdConfigMapping[modelType] = configKey
-			self
-		end
-		
-		def self.defaultDefaultModelCacheProc()
-			Proc.new do |modelType|
-				mtype = modelType
-				dsource = self
-				SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dsource.modelCacheIdForType(mtype)
-				end
-			end
-		end
-		
-		def modelCacheIdForType(modelType = self.class.defaultModelType)
-			configKey = self.class.modelCacheIdConfigKey(modelType)
-			self.config[configKey]
-		end
-		
-	end
-	
-	class SmartDataSource
-
-		def self.defaultDefaultModelCacheProc()
-			Proc.new do |modelType|
-				mtype = modelType
-				dsource = self
-				
-				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dsource.modelCacheIdForType(mtype)
-				end
-				
-				proxy.withProxyPreFilter(:[]) do |k|
-					dsource.touchModel(k, mtype)
-				end
-				
-				proxy
-			end
-		end
-		
-	end
-	
 end
+
+require 'swapdmi/ext/caching/defaultCacheLogic'
+require 'swapdmi/ext/caching/integ'
+SwapDmi.activateExtensionHooks(:caching)
 
