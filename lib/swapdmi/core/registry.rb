@@ -23,7 +23,7 @@ module SwapDmi
 		end
 		
 		def register(id, logger)
-			@registry[id] = logger
+			@registry[SwapDmi.idValue(id)] = logger
 			self
 		end
 		
@@ -33,7 +33,7 @@ module SwapDmi
 		end
 		
 		def [](id)
-			@registry[id]
+			@registry[SwapDmi.idValue(id)]
 		end
 		
 		def default()
@@ -41,7 +41,7 @@ module SwapDmi
 		end
 		
 		def has?(id = self.defaultId)
-			@registry.keys.include?(id)
+			@registry.keys.include?(SwapDmi.idValue(id))
 		end
 	end
 	

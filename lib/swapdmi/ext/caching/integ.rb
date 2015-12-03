@@ -57,7 +57,7 @@ module SwapDmi
 		def modelCacheIdForType(modelType = self.class.defaultModelType)
 			configKey = self.class.modelCacheIdConfigKey(modelType)
 			Rails.logger.debug("get cache for model type: #{modelType} => #{configKey} => #{self.config[configKey]}")
-			self.config[configKey]
+			SwapDmi.idValue( self.config[configKey] )
 		end
 		
 	end

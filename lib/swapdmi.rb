@@ -5,7 +5,9 @@
 # they are mostly stuff to help API developers
 #	API users should NOT generally make direct use of framework stuff
 # 
-require 'swapdmi/framework/base'
+require 'swapdmi/framework/componentIds'
+require 'swapdmi/framework/classHierarchy'
+require 'swapdmi/framework/config'
 require 'swapdmi/framework/hierachicalIndex'
 require 'swapdmi/framework/proxy'
 
