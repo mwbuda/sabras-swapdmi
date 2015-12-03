@@ -1,9 +1,7 @@
 module SwapDmi
 	
 	def self.idValue(rawid)
-		if rawid.nil?
-			nil
-		elsif rawid.class.isSwapDmiId?
+		if rawid.class.isSwapDmiId?
 			rawid
 		else
 			rawid.to_s.to_sym
@@ -53,6 +51,10 @@ end
 class Module
 	def isSwapDmiId?()
 		false
+	end
+	
+	def self.isSwapDmiId?()
+		true
 	end
 end
 
