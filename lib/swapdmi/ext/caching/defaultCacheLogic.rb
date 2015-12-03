@@ -24,13 +24,13 @@ module DefaultCacheLogic
 		
 		schema.defineMainKeyValid(&SwapDmi::DefaultCacheLogic::CacheKeyValidValue)
 		schema.defineTagValid(&SwapDmi::DefaultCacheLogic::CacheKeyValidValue)
+		schema.defineMainKeyUnique(&SwapDmi::DefaultCacheLogic::CacheKeyUniqueId)
+		
+		self
 	end
 
 	def self.configureCache(cache)
-		Rails.logger.debug("!!!ConfigDefault #{cache.id}")
-		cid = cache.id
 		cache.defineReady do
-			Rails.logger.debug("!!!Ready #{cid}")
 			self.instance_exec(&SwapDmi::DefaultCacheLogic::CacheReady)
 		end
 			 
@@ -40,16 +40,22 @@ module DefaultCacheLogic
 		cache.defineGetOne(&SwapDmi::DefaultCacheLogic::CacheGetOne)
 		cache.defineHas(&SwapDmi::DefaultCacheLogic::CacheHasKey)
 		cache.defineEviction(&SwapDmi::DefaultCacheLogic::CacheEvict)
+		
+		self
 	end
 	
 	CacheKeyValidValue = Proc.new do |ki|
-		if SwapDmi::CacheKey.wildcard?(ki)
+		if ki.nil?
 			false
-		elsif ki.nil? 
+		elsif SwapDmi::CacheKey.wildcard?(ki)
 			false
-		else 
-			true
-		end
+		else case ki
+			when Numeric then true
+			when String then true
+			when Symbol then true
+			when Module then true
+			else false
+		end end
 	end
 	
 	CacheKeyValidId = Proc.new do |k|
@@ -58,6 +64,8 @@ module DefaultCacheLogic
 			else SwapDmi::DefaultCacheLogic::CacheKeyValidValue.call(k) 
 		end
 	end
+	
+	CacheKeyUniqueId = CacheKeyValidValue
 	
 	CacheKeyClean = Proc.new do |ki|
 		case ki
@@ -68,11 +76,11 @@ module DefaultCacheLogic
 	
 	CacheKeyCompare = Proc.new do |ka,kb|
 		conds = [
+			Proc.new {|a,b| a == SwapDmi::CacheKey::Wildcard},
+			Proc.new {|a,b| b == SwapDmi::CacheKey::Wildcard}, 
 			Proc.new {|a,b| a == b},
 			Proc.new {|a,b| a.to_s =~ /#{b.to_s}/i},
 			Proc.new {|a,b| b.to_s =~ /#{a.to_s}/i},
-			Proc.new {|a,b| a == SwapDmi::CacheKey::Wildcard},
-			Proc.new {|a,b| b == SwapDmi::CacheKey::Wildcard}, 
 		]
 	
 		matches = conds.map do |cond| 
@@ -86,20 +94,14 @@ module DefaultCacheLogic
 	end
 	
 	CacheSave = Proc.new do |k, data|
-		Rails.logger.debug( "!!!Save: #{self.id}:")
-		Rails.logger.debug("\tCB:\n\t#{internal[:cacheBody].keys.join("\n\t")}")
-		
 		internal[:cacheBody][k] = data
 		internal[:cacheDate][k] = Time.now
 	end
 	
 	CacheHasKey = Proc.new do |k|
-		Rails.logger.debug("!!!Has call: #{SwapDmi::CacheKey.wildcard?(k)}")
 		if internal[:cacheBody].empty?
-			Rails.logger.debug("!!!Has short circut empy")
 			false
 		elsif SwapDmi::CacheKey.wildcard?(k)
-			Rails.logger.debug("!!!Has short circut has *")
 			true
 		else
 			!self.getOne(k).nil?
@@ -112,17 +114,16 @@ module DefaultCacheLogic
 		toSkip = []
 		
 		unless threshold.nil?
-		Rails.logger.debug("!!!CacheEvict attempt evict") 
 		unless internal[:cacheBody].empty?
 		ks.each do |k| 
 			isWildcard = SwapDmi::CacheKey.wildcard?(k)
-			Rails.logger.debug("!!!CacheEvict wildcard mode") if isWildcard
 			isKyFull = k.kind_of?(SwapDmi::CacheKey)
+			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheLogic::CacheKeyUniqueId.call(k)
 		
 			internal[:cacheBody].keys.each do |xk|
 				next if toSkip.include?(xk)
 				time = internal[:cacheDate][xk]
-				Rails.logger.debug("!!!CacheEvict #{threshold} <=> #{now - time}")
+				next if time.nil?
 				toSkip << xk if (now - time) < threshold
 				next if toSkip.include?(xk)
 				 
@@ -139,9 +140,9 @@ module DefaultCacheLogic
 				end
 				
 				internal[:cacheBody].delete(xk) if match
+				break if match && isKyUnique
 			end 
 			
-			Rails.logger.debug("!!!CacheEvict short circut *") if isWildcard
 			break if isWildcard
 		end end end
 	end
@@ -161,8 +162,8 @@ module DefaultCacheLogic
 		unless internal[:cacheBody].empty?
 		ks.each do |k|
 			isWildcard = SwapDmi::CacheKey.wildcard?(k)
-			Rails.logger.debug("!!!CacheGetMany wildcard mode") if isWildcard
 			isKyFull = k.kind_of?(SwapDmi::CacheKey)
+			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheLogic::CacheKeyUniqueId.call(k)
 			
 			internal[:cacheBody].keys.each do |xk|
 				next if results.keys.include?(xk)
@@ -178,10 +179,9 @@ module DefaultCacheLogic
 					SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
 				end
 				
-				Rails.logger.debug("!!!CacheGetMany #{k} <=> #{xk} = #{match}")
 				results[xk] = internal[:cacheBody][xk] if match
+				break if match && isKyUnique
 			end
-			Rails.logger.debug("!!!CacheGetMany short circut has *") if isWildcard
 			break if isWildcard
 		end end
 			
@@ -189,7 +189,6 @@ module DefaultCacheLogic
 	end
 	
 	CacheReady = Proc.new do
-		Rails.logger.debug( "!!!Ready: #{self.id}:")
 		self.defineInternalData(:cacheBody, {})
 		self.defineInternalData(:cacheDate, {})
 	end

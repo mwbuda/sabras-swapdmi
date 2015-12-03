@@ -26,18 +26,16 @@ module SwapDmi
 		
 		def self.modelCacheIdConfigKey(modelType = self.defaultModelType)
 			self.initModelCache
-			@cacheIdConfigMapping.each {|k,v| Rails.logger.debug("get key for model type OPT: #{k} => #{v}") }
-			res = @cacheIdConfigMapping[modelType]
-			Rails.logger.debug("get key for model type RESULT: #{modelType} => #{res}")
-			res
+			SwapDmi.idValue( @cacheIdConfigMapping[modelType] )
 		end
 		
+		#
+		# map a model type to use a cache identified by contents of the given config property
+		# 	EG: if mapModelCacheId(:monkey, X). objects of type X will use Cache[ self.config[:monkey] ]
+		#
 		def self.mapModelCacheIdToConfig(configKey, modelType = self.defaultModelType)
 			self.initModelCache
-			@cacheIdConfigMapping.each {|k,v| Rails.logger.debug("cfg key for model type CURR: #{k} => #{v}") }
-			@cacheIdConfigMapping[modelType] = configKey
-			Rails.logger.debug("get key for model type NEW: #{modelType} => #{configKey}")
-			@cacheIdConfigMapping.each {|k,v| Rails.logger.debug("cfg key for model type SANITY: #{k} => #{v}") }
+			@cacheIdConfigMapping[modelType] = SwapDmi.idValue(configKey)
 			self
 		end
 		
@@ -46,9 +44,6 @@ module SwapDmi
 				mtype = modelType
 				dsource = self
 				SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					$railsLogger.debug("!!!Proxy dsource = #{self}")
-					$railsLogger.debug("!!!Proxy mtype = #{mtype}")
-					$railsLogger.debug("!!!Proxy result = #{dsource.modelCacheIdForType(mtype)}")
 					dsource.modelCacheIdForType(mtype)
 				end
 			end
@@ -56,7 +51,6 @@ module SwapDmi
 		
 		def modelCacheIdForType(modelType = self.class.defaultModelType)
 			configKey = self.class.modelCacheIdConfigKey(modelType)
-			Rails.logger.debug("get cache for model type: #{modelType} => #{configKey} => #{self.config[configKey]}")
 			SwapDmi.idValue( self.config[configKey] )
 		end
 		
@@ -73,8 +67,8 @@ module SwapDmi
 					dsource.modelCacheIdForType(mtype)
 				end
 				
-				proxy.withProxyPreFilter(:[]) do |k|
-					dsource.touchModel(k, mtype)
+				proxy.withProxyPreFilter(:[]) do |cache, k|
+					dsource.touchModel(k, mtype) unless cache.has_key?(k)
 				end
 				
 				proxy

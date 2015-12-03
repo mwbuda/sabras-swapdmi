@@ -9,14 +9,13 @@ module SwapDmi
 	class ProxyObject < BasicObject
 		
 		def initialize(registry, key = nil, &keyproc)
-			#TODO delete me
-			$railsLogger.debug("create SwapDmi Proxy => (#{registry}.#{keyproc ? '???' : key} <= #{keyproc})")
-			
 			@registry = registry
 			@filters = {}
 			
 			unless keyproc
 				@key = idValue(key)
+				@mutable = false
+				@setkey = true
 			else
 				@keyproc = keyproc
 				@mutable = key ? true : false
@@ -32,9 +31,9 @@ module SwapDmi
 		def proxyObjectKey()
 			return @key unless @keyproc
 			
-			unless @mutable && @setkey
+			unless @setkey
 					@key = idValue( self.instance_exec(&@keyproc) )
-					@setkey = true
+					@setkey = !@mutable
 					@key
 			else
 					@key
@@ -43,30 +42,20 @@ module SwapDmi
 		
 		def proxyObjectDelegate()
 			key = self.proxyObjectKey
-			res = @registry[key]
-			
-			#TODO: delete me
-			$railsLogger.debug("proxy delegate: #{@registry} => #{key}::#{key.class} => #{res}")
-			res
+			@registry[key]
 		end
 			
 		def idValue(rawid)
-			$railsLogger.debug("proxy kludge swap dmi id value (#{rawid})")
 			SwapDmi.idValue(rawid)
 		end
 			
 		def method_missing(method, *args, &proc)
-			#TODO delete me
-			$railsLogger.debug("proxy delegate: call #{method}")
-			$railsLogger.debug("proxy delegate: filters for #{method}? => #{!@filters[method].nil?}")
+			delegate = self.proxyObjectDelegate
 			
 			filter = @filters[method]
-			self.instance_exec(method, *args, &filter) unless filter.nil?
+			self.instance_exec(delegate, *args, &filter) unless filter.nil?
 			
-			#TODO delete me
-			$railsLogger.debug("proxy delegate: ran filter for #{method}")
-			
-			self.proxyObjectDelegate.send(method, *args, &proc) 
+			delegate.send(method, *args, &proc) 
 		end 
 	end
 	

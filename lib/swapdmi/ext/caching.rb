@@ -10,6 +10,11 @@ module SwapDmi
 			self.assignId(id)
 		end
 	
+		def defineMainKeyUnique(&block)
+			@mainKeyUnique = block
+			self
+		end
+	
 		def defineMainKeyClean(&block)
 			@mainKeyClean = block
 			self
@@ -45,7 +50,7 @@ module SwapDmi
 		end
 	
 		def compareMainKeys(ak,bk)
-			@mainTagCompare.call(ak,bk)
+			@mainKeyCompare.call(ak,bk)
 		end
 	
 		def compareTags(atags, btags)
@@ -63,6 +68,12 @@ module SwapDmi
 			end
 				
 			true
+		end
+		
+		# if true, provided main key will only ever refer to a single, unique record
+		# 	if false, many possible items in the cache could be returned by provided main key
+		def uniqueMainKey?(k)
+			@mainKeyUnique.call(k)
 		end
 	
 		def validMainKey?(k)
@@ -86,7 +97,9 @@ module SwapDmi
     	case x
     		when Wildcard then true
     		when Wildcard.to_s then true
-    		when self.wildcard then true
+    		when SwapDmi::CacheKey then ([x.mainKey] + x.tags).each do |kp|
+    			return true if self.wildcard?(kp)
+    		end 
     		else false
     	end
     end
@@ -136,6 +149,10 @@ module SwapDmi
     
     def validId?()
     	@schema.validMainKey?(self.mainKey) and @schema.validTags?(*self.tags)
+    end
+    
+    def unique?()
+    	@schema.mainKeyUniqueMatch?(self.mainKey)
     end
     
   end
@@ -274,7 +291,6 @@ module SwapDmi
     end
     
     def has?(k)
-    	Rails.logger.debug("Cache Call Has: #{k}")
     	self.ready
     	self.evict(k) if @evictWhen[:checkHas]
     	self.instance_exec(k, &@checkHas)
