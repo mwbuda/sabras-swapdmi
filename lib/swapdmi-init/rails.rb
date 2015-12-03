@@ -192,16 +192,16 @@ module SwapDmi
 		end
 		
 		def loadConfig(klass, cfgroot, cfg)
-			Rails.logger.debug('SwapDmi: load ContextOfUse config')
+			Rails.logger.debug("SwapDmi: load #{klass} config")
 			cfgKey = "swapdmi.cfg.#{cfgroot}"
 			allCfg = Hash.new {|h,k| h[k] = {}}
 			rawCfg = cfg[cfgKey].nil? ? {} : cfg[cfgKey]
 			allCfg.merge!(rawCfg)
-			allCfg.each do |k,xcfg|
-				ck = k.to_s.to_sym
-				cfgBody = klass.config(ck)
-				cfgBody.merge!(xcfg)
-				cfgBody.each {|xcfgk,v| Rails.logger.debug("SwapDmi - Config:\t--> #{cfgroot}.#{ck}.#{xcfgk} = #{v}") } 
+			allCfg.each do |componentId,xcfg|
+				cfgBody = klass.config(componentId)
+				xxcfg = xcfg.map {|k,v| { SwapDmi.idValue(k) => v } }.reduce(:merge) 
+				cfgBody.merge!(xxcfg)
+				cfgBody.each {|loadedK,v| Rails.logger.debug("SwapDmi - Config:\t--> #{klass}.#{componentId}.#{loadedK} = #{v}") } 
 			end
 		end
 		
