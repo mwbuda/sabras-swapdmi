@@ -19,6 +19,18 @@ Setup = {
 	:c => 5,
 }
 
+Priority = {
+	:a => 200,
+	:b => nil,
+	:c => 300
+}
+
+GPriority = {
+	:a => nil,
+	:b => nil,
+	:c => -1
+}
+
 def vcalc(k, arg, multiplier)
 	"#{k}#{arg * multiplier}".to_sym
 end
@@ -41,6 +53,14 @@ Setup.each do |key, multiplier|
 		vcalc(key,a1+a2+a3,multiplier)
 	end
 	
+	mlogic.define(:priority) do
+		key
+	end
+	
+	mlogic.define(:gpriority) do
+		key
+	end
+	
 	mlogic.define(:checkId) do
 		self.id
 	end
@@ -58,28 +78,41 @@ Setup.keys.each do |k|
 	puts "\t filters for #{k}" 
 	Merge.defineFilterFor(k, :array)        {|dk, d, filter, args| filter =~ /#{dk}/} 
 	Merge.defineFilterFor(k, :scalar, :one) {|dk, d, filter, args| filter =~ /#{dk}/}
+	puts "\tset priority for #{k}"
+	Merge.defineCallPriorityFor(k, Priority[k], :priority)
+	Merge.defineGlobalCallPriorityFor(k, GPriority[k])
 end
 
 puts 'define array logic'
-Merge.define(:array) do |args, subres|
+Merge.define(:array) do |aggregate|
 	res = []
-	subres.values.each {|sres| res += sres }
+	aggregate.results.each {|sres| res += sres}
 	res
 end
 
 puts 'define scalar one logic'
-Merge.define(:scalar, :one) do |args, subres|
-	subres.values
+Merge.define(:scalar, :one) do |aggregate|
+	aggregate.results
 end
 
 puts 'define scalar two logic'
-Merge.define(:scalar, :two) do |args, subres|
-	subres.values
+Merge.define(:scalar, :two) do |aggregate|
+	aggregate.results
+end
+
+puts 'define priority logic'
+Merge.define(:priority) do |aggregate|
+	aggregate.results
+end
+
+puts 'define gpriority logic'
+Merge.define(:gpriority) do |aggregate|
+	aggregate.results
 end
 
 puts 'define check id logic'
-Merge.define(:checkId) do |args, subres|
-	"#{self.id}(#{subres.keys.sort.join(',')})"
+Merge.define(:checkId) do |aggregate|
+	"#{self.id}(#{aggregate.delegates.sort.join(',')})"
 end
 
 #execute the model logic and ensure proper results
@@ -147,6 +180,19 @@ def executeTest3(filter)
 	end
 end
 
+def executePriorityTest()
+	puts 'execute priority test: global'
+	results = SwapDmi::ModelImpl[:merge][:gpriority].call.join
+	puts "\t'#{results}'"
+	assertTrue(results == 'abc')
+	
+	puts 'execute priority test: per action'
+	results = SwapDmi::ModelImpl[:merge][:priority].call.join
+	puts "\t'#{results}'"
+	assertTrue(results == 'cab')
+	
+end
+
 def executeCheckIdTest()
 	puts 'execute check id/scope test'
 	res = SwapDmi::ModelImpl[:merge][:checkId].call()
@@ -165,6 +211,7 @@ executeTest3("abc")
 executeTest3("ab")
 executeTest3("a")
 
+executePriorityTest()
 executeCheckIdTest()
 puts 'all tests pass, complete'
 
