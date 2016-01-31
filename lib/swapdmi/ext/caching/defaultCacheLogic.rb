@@ -6,12 +6,10 @@ module DefaultCacheLogic
 	#define these for testing purposes,
 	# normally won't need to use them
 	def self.internal()
-		Rails.logger.error("WARNING! in DefaultCacheLogic class.internal")
 		@internal = {:cacheBody => {}, :cacheDate => {}} if @internal.nil?
 		@internal
 	end
 	def internal
-		Rails.logger.error("WARNING! in DefaultCacheLogic instance.internal")
 		SwapDmi::DefaultCacheLogic.internal
 	end
 
