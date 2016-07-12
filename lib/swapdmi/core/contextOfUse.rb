@@ -40,7 +40,7 @@ module SwapDmi
 		end
 		
 		def impl(k = :default)
-			mi = SwapDmi::ModelImpl[ @impls[swapDmi.idValue(k)] ]
+			mi = SwapDmi::ModelImpl[ @impls[SwapDmi.idValue(k)] ]
 			mi.ready! unless mi.nil?
 			mi
 		end
