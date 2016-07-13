@@ -23,9 +23,21 @@ module SwapDmi
 		
 		def ready!()
 			return self if @isReady
+			self.preReady()
 			self.instance_exec(&@readyLogic) unless @readyLogic.nil?
+			self.postReady()
 			@isReady = true
 			self
+		end
+		
+		#hard-coded behavior called BEFORE configured ready logic
+		def preReady()
+			#does nothing. extend in subclasses
+		end
+		
+		#hard-coded behavior called AFTER configured ready logic
+		def postReady()
+			#does nothing. extend in subclasses
 		end
 		
 		def define(*keys, &logic)
