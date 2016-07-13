@@ -1,0 +1,35 @@
+
+
+//on the use of class variables
+
+SwapDMI makes unusually heavy use of both class variables,
+
+It is typically considered bad practice to use this feature,
+with class instance variables being recommended instead. 
+Generally this opinion is justified by the assertion that class instance variables are what the programmer actually wants,
+as class instance variables are not shared with subclasses, who will have their own mutable copy.
+
+However, for where it is used in SwapDMI full class variables are in fact desirable,
+for the specific reason that they are shared between the root where they are defined and all subclasses.
+
+Typically, class variables are used for 2 purposes in SwapDMI:
+ * instance lookup tables, where a given instantiated instance of a class can be obtained from a class method via the instance's id attribute
+ * class configuration that may need to be created PRIOR to creating the instance to which it belongs
+ 
+Class instance variables are effectivly useless for both these purposes, as we want specialized subclass instances to also be accessible
+thru the base class lookup/configuration methods.
+A good example of this is MergedModelImpl, which we want to be effectivly indistinguishable in how instances are accessed
+from regular ModelImpl instances.
+This means that created MergedModelImpl instances MUST be accessible via ModelImpl[<id>]
+
+
+
+
+
+
+
+
+
+
+
+

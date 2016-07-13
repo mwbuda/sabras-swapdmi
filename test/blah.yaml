@@ -1,0 +1,18 @@
+
+simp: value
+deep:
+ ? - one
+   - two
+   - three 
+ : 123
+ [1,2,3] : value
+ four: five
+
+
+
+
+
+
+
+
+
