@@ -77,7 +77,7 @@ puts 'test must define save & get on cache'
 puts 'test cant reconfigure'
 
 	TestCantReconfigCache = SwapDmi::Cache.new(:testCantReconfig)
-	SwapDmi::DefaultCacheLogic.configure(TestCantReconfigCache)
+	SwapDmi::DefaultCacheLogic.configureCache(TestCantReconfigCache)
 	TestCantReconfigCache.ready
 	
 	did_bork = false

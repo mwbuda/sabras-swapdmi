@@ -24,7 +24,7 @@ module SwapDmi
 		end
 		
 		def self.defaultDefaultModelCacheProc()
-			Proc.new do |instanceId, modelType|
+			Proc.new do |modelType|
 				mtype = modelType
 				dsource = self
 				SwapDmi::ProxyObject.new(SwapDmi::Cache) do

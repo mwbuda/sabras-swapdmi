@@ -383,7 +383,18 @@ module SwapDmi
 	
 end
 
+require 'swapdmi/ext/caching/defaultCacheKeyLogic'
 require 'swapdmi/ext/caching/defaultCacheLogic'
+require 'swapdmi/ext/caching/marshalCacheLogic'
 require 'swapdmi/ext/caching/integ'
+
+module SwapDmi
+	DefaultCacheKeySchema = SwapDmi::CacheKeySchema.new(:default)
+  SwapDmi::DefaultCacheKeyLogic.configureCacheKeySchema(DefaultCacheKeySchema)
+  
+	DefaultCache = SwapDmi::Cache.new(:default)
+	SwapDmi::DefaultCacheLogic.configureCache(DefaultCache)
+end
+
 SwapDmi.activateExtensionHooks(:caching)
 
