@@ -152,7 +152,7 @@ module SwapDmi
     end
     
     def unique?()
-    	@schema.mainKeyUniqueMatch?(self.mainKey)
+    	@schema.uniqueMainKey?(self.mainKey)
     end
     
   end
@@ -185,14 +185,17 @@ module SwapDmi
     	@evictWhen = {}
     end
     
-    def defineEvictWhen(whenKey)
-    	raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.include?(whenKey)
-    	case whenKey
-    		when :all
-    			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
-    		else
-    			@evictWhen[whenKey] = true
-    	end
+    def defineEvictWhen(*whenKeys)
+    	whenKeys.each do |whenKey|
+    		raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.include?(whenKey)
+	    	case whenKey
+	    		when :all
+	    			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
+	    			break
+	    		else
+	    			@evictWhen[whenKey] = true
+	    	end
+	    end
     	self
     end
     
@@ -298,6 +301,7 @@ module SwapDmi
     
     alias :has_key? :has?
     alias :hasKey? :has?
+		
 
     # Removes keys from cache automatically
     def evict(*keys)
@@ -385,7 +389,7 @@ end
 
 require 'swapdmi/ext/caching/defaultCacheKeyLogic'
 require 'swapdmi/ext/caching/defaultCacheLogic'
-require 'swapdmi/ext/caching/marshalCacheLogic'
+require 'swapdmi/ext/caching/stashCacheLogic'
 require 'swapdmi/ext/caching/integ'
 
 module SwapDmi
