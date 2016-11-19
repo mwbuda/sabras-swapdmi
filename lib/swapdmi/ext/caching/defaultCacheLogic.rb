@@ -53,7 +53,7 @@ module DefaultCacheLogic
 		ks.each do |k| 
 			isWildcard = SwapDmi::CacheKey.wildcard?(k)
 			isKyFull = k.kind_of?(SwapDmi::CacheKey)
-			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheLogic::CacheKeyUniqueId.call(k)
+			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheKeyLogic::CacheKeyUniqueId.call(k)
 		
 			internal[:cacheBody].keys.each do |xk|
 				next if toSkip.include?(xk)
@@ -111,7 +111,7 @@ module DefaultCacheLogic
 				elsif isXkyFull
 					xk.matchMainKey(k)	
 				else
-					SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
+					SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(k,xk)
 				end
 				
 				results[xk] = internal[:cacheBody][xk] if match
