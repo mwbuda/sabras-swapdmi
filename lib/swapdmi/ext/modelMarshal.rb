@@ -7,24 +7,24 @@ module SwapDmi
 	SwapDmi.declareExtension(:modelMarshal)
 	
 	def self.marshal(raw)
-		cooked = case data
+		cooked = case raw
 			when SwapDmi::Model
-				data.marshal
+				raw.marshal
 			when Array
 				v2 = []
-				data.each { |sv| v2 << self.marshal(sv) }
+				raw.each { |sv| v2 << self.marshal(sv) }
 				v2
 			when Hash
 				v2 = {}
-				data.each { |k,sv| v2[k] = self.marshal(sv) }
-			else data 
+				raw.each { |k,sv| v2[k] = self.marshal(sv) }
+			else raw 
 		end
 		Marshal::dump(cooked)
 	end
 	
 	def self.unmarshal(marshalled)
-		loaded = Marshal::Load(marshalled)
-		self.parseUnMarshalled(loaded)
+		loaded = Marshal::load(marshalled)
+		self.parseMarshalData(loaded)
 	end
 	
 	def self.parseMarshalData(loaded)
@@ -68,7 +68,8 @@ module SwapDmi
 				v = self.instance_variable_get(field)
 				next if self.omitMarshalFieldValue?(v)
 				v = self.marshalFieldValue(v)
-				fk = field.to_s[1,-1].to_sym
+				#we know first char will be '@', so drop
+				fk = field.to_s[1,field.size-1].to_sym
 				fields[fk] = v
 			end
 			
@@ -76,6 +77,28 @@ module SwapDmi
 			addlMarshal = self.class.additionalMarshallingProc
 			self.instance_exec(pickle, &addlMarshal) unless addlMarshal.nil?
 			pickle
+		end
+		
+		# |pickled-model|
+		#
+		#
+		def self.defineAdditionalMarshalling(&block)
+			@addlMarshal = block
+			self
+		end
+		def self.additionalMarshallingProc()
+			@addlMarshal
+		end
+		
+		# |pickled-model|
+		#
+		#
+		def self.defineAdditionalUnMarshalling(&block)
+			@addlUnmarshal = block
+			self
+		end
+		def self.additionalUnMarshallingProc()
+			@addlUnmarshal
 		end
 		
 		def self.unmarshalFieldValue(rawv)
