@@ -38,12 +38,11 @@ module StashCacheLogic
 	#
 	#
 	class Stash
-		extend HasConfig
-		extend TrackClassHierarchy
+		extend SwapDmi::HasConfig
+		extend SwapDmi::TrackClassHierarchy
 		
-		def initialize(id = :default)
+		def initialize(id = self.class.defaultId)
 			self.assignId(id)
-			@readyFlag = false
 		end
 		
 		def defineReady(&block)
@@ -97,7 +96,7 @@ module StashCacheLogic
 			self	
 		end
 		
-		# |cacheId, cacheKey, data|
+		# |cacheId, cacheKey, raw-data|
 		# parses data coming out of the stash
 		# 	
 		def defineParse(&block)
@@ -112,7 +111,7 @@ module StashCacheLogic
 			@stashGet = block
 			self
 		end
-		def get(cacheKey)
+		def get(cacheId, cacheKey)
 			self.ready
 			begin
 				cook = self.instance_exec(cacheId, cacheKey, &@stashGet)
@@ -182,18 +181,17 @@ module StashCacheLogic
 	def self.createCacheReady(stashId)
 		sid = stashId
 		Proc.new do 
-			self.internal[:stash] = SwapDmi::StashCacheLogic::Stash[sid]
+			self.defineInternalData(:stash, SwapDmi::StashCacheLogic::Stash[sid])
 		end
 	end
 	
 	CacheSave = Proc.new do |k, data|
-		self.internal[:stash].put(self.id, k, data)
+		internal[:stash].put(self.id, k, data)
 	end
 	
 	CacheGetMany = Proc.new do |ks|
-		
 		results = {}
-		stash = self.internal[:stash]
+		stash = internal[:stash]
 		stashIndex = stash.summary(self.id)
 		
 		unless stashIndex.empty?
@@ -213,7 +211,7 @@ module StashCacheLogic
 				elsif isXkyFull
 					xk.matchMainKey(k)	
 				else
-					SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(k,xk)
+					SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(k,xk)
 				end
 				
 				next unless match
@@ -231,7 +229,7 @@ module StashCacheLogic
 		results
 	end
 	
-	CacheHasKey = Proc.new do
+	CacheHasKey = Proc.new do |k|
 		if internal[:stash].summary(self.id).empty?
 			false
 		elsif SwapDmi::CacheKey.wildcard?(k)
@@ -241,7 +239,7 @@ module StashCacheLogic
 		end
 	end
 	
-	CacheEvict = Proc.new do
+	CacheEvict = Proc.new do |ks|
 		now = Time.now
 		stash = internal[:stash]
 		stashIndex = stash.summary(self.id)
@@ -253,7 +251,7 @@ module StashCacheLogic
 		ks.each do |k| 
 			isWildcard = SwapDmi::CacheKey.wildcard?(k)
 			isKyFull = k.kind_of?(SwapDmi::CacheKey)
-			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheLogic::CacheKeyUniqueId.call(k)
+			isKyUnique = isKyFull ? k.unique? : SwapDmi::DefaultCacheKeyLogic::CacheKeyUniqueId.call(k)
 		
 			stashIndex.keys.each do |xk|
 				next if toSkip.include?(xk)
@@ -274,7 +272,7 @@ module StashCacheLogic
 					SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(k,xk)
 				end
 				
-				stash.remove(xk) if match
+				stash.remove(self.id, xk) if match
 				break if match && isKyUnique
 			end 
 			
