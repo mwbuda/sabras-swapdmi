@@ -9,15 +9,15 @@ module SwapDmi
 module DefaultCacheKeyLogic
 	
 	def self.configureCacheKeySchema(schema)
-		schema.defineMainKeyClean(&SwapDmi::DefaultCacheLogic::CacheKeyClean)
-		schema.defineTagClean(&SwapDmi::DefaultCacheLogic::CacheKeyClean)
+		schema.defineMainKeyClean(&SwapDmi::DefaultCacheKeyLogic::CacheKeyClean)
+		schema.defineTagClean(&SwapDmi::DefaultCacheKeyLogic::CacheKeyClean)
 		
-		schema.defineMainKeyCompare(&SwapDmi::DefaultCacheLogic::CacheKeyCompare)
-		schema.defineTagCompare(&SwapDmi::DefaultCacheLogic::CacheKeyCompare)
+		schema.defineMainKeyCompare(&SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare)
+		schema.defineTagCompare(&SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare)
 		
-		schema.defineMainKeyValid(&SwapDmi::DefaultCacheLogic::CacheKeyValidValue)
-		schema.defineTagValid(&SwapDmi::DefaultCacheLogic::CacheKeyValidValue)
-		schema.defineMainKeyUnique(&SwapDmi::DefaultCacheLogic::CacheKeyUniqueId)
+		schema.defineMainKeyValid(&SwapDmi::DefaultCacheKeyLogic::CacheKeyValidValue)
+		schema.defineTagValid(&SwapDmi::DefaultCacheKeyLogic::CacheKeyValidValue)
+		schema.defineMainKeyUnique(&SwapDmi::DefaultCacheKeyLogic::CacheKeyUniqueId)
 		
 		self
 	end
@@ -39,7 +39,7 @@ module DefaultCacheKeyLogic
 	CacheKeyValidId = Proc.new do |k|
 		case k
 			when SwapDmi::CacheKey then k.isValid?
-			else SwapDmi::DefaultCacheLogic::CacheKeyValidValue.call(k) 
+			else SwapDmi::DefaultCacheKeyLogic::CacheKeyValidValue.call(k) 
 		end
 	end
 	
@@ -54,11 +54,11 @@ module DefaultCacheKeyLogic
 	
 	CacheKeyCompare = Proc.new do |ka,kb|
 		conds = [
-			Proc.new {|a,b| a == SwapDmi::CacheKey::Wildcard},
-			Proc.new {|a,b| b == SwapDmi::CacheKey::Wildcard}, 
+			Proc.new {|a,b| SwapDmi::CacheKey.wildcard?(a)},
+			Proc.new {|a,b| SwapDmi::CacheKey.wildcard?(b)}, 
 			Proc.new {|a,b| a == b},
-			Proc.new {|a,b| a.to_s =~ /#{b.to_s}/i},
-			Proc.new {|a,b| b.to_s =~ /#{a.to_s}/i},
+			Proc.new {|a,b| a.to_s =~ /#{b.to_s}/i ? true : false},
+			Proc.new {|a,b| b.to_s =~ /#{a.to_s}/i ? true : false},
 		]
 	
 		matches = conds.map do |cond| 
