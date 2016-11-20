@@ -152,7 +152,7 @@ module SwapDmi
     end
     
     def unique?()
-    	@schema.mainKeyUniqueMatch?(self.mainKey)
+    	@schema.uniqueMainKey?(self.mainKey)
     end
     
   end
@@ -185,14 +185,17 @@ module SwapDmi
     	@evictWhen = {}
     end
     
-    def defineEvictWhen(whenKey)
-    	raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.include?(whenKey)
-    	case whenKey
-    		when :all
-    			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
-    		else
-    			@evictWhen[whenKey] = true
-    	end
+    def defineEvictWhen(*whenKeys)
+    	whenKeys.each do |whenKey|
+    		raise SwapDmi::CacheSetupError.new unless SwapDmi::Cache::EvictWhen.include?(whenKey)
+	    	case whenKey
+	    		when :all
+	    			SwapDmi::Cache::EvictWhen.each {|xWhenKey| @evictWhen[xWhenKey] = true}
+	    			break
+	    		else
+	    			@evictWhen[whenKey] = true
+	    	end
+	    end
     	self
     end
     
@@ -298,6 +301,7 @@ module SwapDmi
     
     alias :has_key? :has?
     alias :hasKey? :has?
+		
 
     # Removes keys from cache automatically
     def evict(*keys)
@@ -315,42 +319,86 @@ module SwapDmi
 	
 	module HasCache
 		def self.extended(base)
-			cacheTable = Hash.new do |instances,id|
-				instances[id] = :default
+			# class based lookup table for static config
+			# class => cache alias => real cache id
+			classCacheTable = Hash.new do |cacheLinks, cacheAlias|
+				cacheLinks[cacheAlias] = :default
 			end
+			
+			# instance based table, used in preference to the class based table
+			#
+			# instance of object.id => cache alias => real cache id
+			cacheTable = Hash.new do |instances,instanceId|
+				instances[instanceId] = {}
+			end
+			base.class_variable_set(:@@classCaching, classCacheTable)
 			base.class_variable_set(:@@caching, cacheTable)
 			base.instance_eval { include SwapDmi::HasCache::Instance }
 		end
 		
-		def dataCaching()
+		def classDataCaching()
+			self.class_variable_get(:@@classCaching)
+		end
+		
+		def instanceDataCaching()
 			self.class_variable_get(:@@caching)
 		end
 		
-		def defineCaching(id,chid)
-			self.dataCaching[id] = chid
+		def defineDefaultCaching(chid)
+			self.classDataCaching[:default] = chid
 			self
 		end
 		
-		def dataCacher(id)
-			chid = self.dataCaching[id]
-			SwapDmi::Cache[chid]
+		def defineCaching(chalias, chid)
+			self.classDataCaching[chalias] = chid
+			self
+		end
+		
+		def dataCacherId(instanceId, chalias)
+			ichid = self.instanceDataCaching[instanceId][chalias]
+			return ichid unless ichid.nil?
+			self.classDataCachint[chalias]
+		end
+		
+		def dataCacher(instanceId, chalias)
+			SwapDmi::Cache[ self.dataCacherId(instanceId, chalias) ]
 		end
 		
 		module Instance
-			def defineCaching(chid)
-				self.class.dataCaching[self.id] = chid
+			def defineDefaultCache(chid)
+				self.class.dataCaching[self.id][:default] = chid
 				self
 			end
+			
+			def defineCache(chalias, chid)
+				self.class.instanceDataCaching[self.id][chalias] = chid				
+				self
+			end
+			
+			def dataCacherId(chid = :default)
+				self.class.dataCacherId(self.id, chid)
+			end
 		
-			def dataCacher()
-				self.class.dataCacher(self.id)
+			def dataCacher(chid = :default)
+				self.class.dataCacher(self.id, chid)
 			end
 		end
 	end
 	
 end
 
+require 'swapdmi/ext/caching/defaultCacheKeyLogic'
 require 'swapdmi/ext/caching/defaultCacheLogic'
+require 'swapdmi/ext/caching/stashCacheLogic'
 require 'swapdmi/ext/caching/integ'
+
+module SwapDmi
+	DefaultCacheKeySchema = SwapDmi::CacheKeySchema.new(:default)
+  SwapDmi::DefaultCacheKeyLogic.configureCacheKeySchema(DefaultCacheKeySchema)
+  
+	DefaultCache = SwapDmi::Cache.new(:default)
+	SwapDmi::DefaultCacheLogic.configureCache(DefaultCache)
+end
+
 SwapDmi.activateExtensionHooks(:caching)
 

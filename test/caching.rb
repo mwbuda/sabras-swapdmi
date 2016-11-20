@@ -38,21 +38,21 @@ puts 'test cache key matching'
 
 	#raw main key exact match
 	assertTrue( 
-		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, :raw)
+		SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(:raw, :raw)
 	)
 	assertFalse( 
-		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, :wrong)
+		SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(:raw, :wrong)
 	)
 	assertFalse( 
-		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:wrong, :raw)
+		SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(:wrong, :raw)
 	)
 
 	#raw main key wildcard match
 	assertTrue( 
-		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(SwapDmi::CacheKey::Wildcard, :raw)
+		SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(SwapDmi::CacheKey::Wildcard, :raw)
 	)
 	assertTrue( 
-		SwapDmi::DefaultCacheLogic::CacheKeyCompare.call(:raw, SwapDmi::CacheKey::Wildcard)
+		SwapDmi::DefaultCacheKeyLogic::CacheKeyCompare.call(:raw, SwapDmi::CacheKey::Wildcard)
 	)
 
 	#check valid id
@@ -77,7 +77,7 @@ puts 'test must define save & get on cache'
 puts 'test cant reconfigure'
 
 	TestCantReconfigCache = SwapDmi::Cache.new(:testCantReconfig)
-	SwapDmi::DefaultCacheLogic.configure(TestCantReconfigCache)
+	SwapDmi::DefaultCacheLogic.configureCache(TestCantReconfigCache)
 	TestCantReconfigCache.ready
 	
 	did_bork = false
