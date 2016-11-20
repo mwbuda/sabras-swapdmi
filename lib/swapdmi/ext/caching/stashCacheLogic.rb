@@ -29,14 +29,11 @@ module StashCacheLogic
   	
   end
   
-  # raised if attempt to reconfigure a cache after attempting to use it
+  # raised if attempt to reconfigure a stash after attempting to use it
   class StashReconfigureError < StandardError
   	
   end
 	
-	# handles 'stashing' cache data to some (assumed semi/persistent) store
-	#
-	#
 	class Stash
 		extend SwapDmi::HasConfig
 		extend SwapDmi::TrackClassHierarchy
@@ -45,15 +42,77 @@ module StashCacheLogic
 			self.assignId(id)
 		end
 		
+		def ready()
+			return if @readyFlag
+			begin
+				self.onReady
+			rescue SwapDmi::StashCacheLogic::StashSetupError => setupe
+				raise setupe
+			rescue => e
+				raise SwapDmi::StashCacheLogic::StashSetupError.new(e)
+			end
+			@readyFlag = true
+      self
+		end
+		
+		def isReady?()
+			@readyFlag
+		end
+		
+		def put(cid, ck, data)
+			self.ready
+			begin
+				self.onPut(cid, ck, data)
+			rescue => e
+				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+			end
+			self	
+		end
+		
+		def get(cid, ck)
+			self.ready
+			begin
+				self.onGet(cid, ck)
+			rescue => e
+				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+			end
+		end
+		
+		def remove(cid, ck)
+			self.ready
+			begin
+				self.onRemove(cid, ck)
+			rescue => e
+				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+			end
+			self
+		end
+		
+		def summary(cid)
+			self.ready
+			begin
+				res = self.onSummary(cid)
+				res.nil? ? {} : res
+			rescue => e
+				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+			end
+		end
+		
+	end
+	
+	# handles 'stashing' cache data to some (assumed semi/persistent) store
+	#
+	#
+	class ProgrammableStash < Stash
+		
 		def defineReady(&block)
-			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if @readyFlag
+			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if self.isReady?
 			@ready = block
 			self
 		end
 		
-		def ready()
-			return if @readyFlag
-			
+		def onReady()
+			return if self.isReady?
 			{
 				'put' => @stashPut,
 				'get' => @stashGet,
@@ -65,60 +124,28 @@ module StashCacheLogic
 			end
 			
       self.instance_exec(&@ready) unless @ready.nil?
-      @readyFlag = true
-      self
 		end
 		
-		# |cacheId, cacheKey, data|
-		# prepares data before it goes into the stash
-		#
-		def definePrepare(&block)
-			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if @readyFlag
-			@prep = block
-			self
-		end
 		# |cache-id, cache-key, data|
 		#
 		def definePut(&block)
-			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if @readyFlag
+			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if self.isReady?
 			@stashPut = block
 			self
 		end
-		def put(cacheId, cacheKey, raw)
-			self.ready
-			begin
-				cook = @prep.nil? ? raw : self.instance_exec(cacheId, cacheKey, raw, &@prep)
-				self.instance_exec(cacheId, cacheKey, cook, &@stashPut)
-			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
-			end
-			
-			self	
+		def onPut(cacheId, cacheKey, data)
+				self.instance_exec(cacheId, cacheKey, data, &@stashPut)
 		end
 		
-		# |cacheId, cacheKey, raw-data|
-		# parses data coming out of the stash
-		# 	
-		def defineParse(&block)
-			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if @readyFlag
-			@parse = block
-			self
-		end
 		# |cache-id, cache-key|
 		#
 		def defineGet(&block)
-			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if @readyFlag
+			raise SwapDmi::StashCacheLogic::StashReconfigureError.new if self.isReady?
 			@stashGet = block
 			self
 		end
-		def get(cacheId, cacheKey)
-			self.ready
-			begin
-				cook = self.instance_exec(cacheId, cacheKey, &@stashGet)
-				@parse.nil? ? cook : self.instance_exec(cacheId, cacheKey, cook, &@parse) 
-			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
-			end
+		def onGet(cacheId, cacheKey)
+			self.instance_exec(cacheId, cacheKey, &@stashGet)
 		end
 		
 		# |cache-id, cache-key|
@@ -128,14 +155,8 @@ module StashCacheLogic
 			@clear = block
 			self
 		end
-		def remove(cacheId, cacheKey)
-			self.ready
-			begin
-				self.instance_exec(cacheId, cacheKey, &@clear)
-			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
-			end
-			self
+		def onRemove(cacheId, cacheKey)
+			self.instance_exec(cacheId, cacheKey, &@clear)
 		end
 		
 		# |cacheId|
@@ -150,14 +171,8 @@ module StashCacheLogic
 		#
 		#	{cacheKey => timestamp when data put into stash}
 		#
-		def summary(cacheId)
-			self.ready
-			begin
-				res = self.instance_exec(cacheId, &@summary)
-				res.nil? ? {} : res
-			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
-			end
+		def onSummary(cacheId)
+			self.instance_exec(cacheId, &@summary)
 		end
 		
 	end
