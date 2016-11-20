@@ -11,11 +11,11 @@ module SwapDmi
 
 		def self.validateKeys(*keys)
 			tests = [
-				Proc.new {|keys| keys.nil? ? 'nil key set' : nil},
-				Proc.new {|keys| keys.empty? ? 'empty key set' : nil},
-				Proc.new do |keys|
-					ckeys = keys.compact
-					(ckeys.size != keys.size) ? 'nil key set items' : nil
+				Proc.new {|ks| ks.nil? ? 'nil key set' : nil},
+				Proc.new {|ks| ks.empty? ? 'empty key set' : nil},
+				Proc.new do |ks|
+					ckeys = ks.compact
+					(ckeys.size != ks.size) ? 'nil key set items' : nil
 				end,
 			]
 			tests.each {|test| tv = test.call(keys) ; return tv unless tv.nil?}

@@ -22,16 +22,10 @@ $timestamps = Hash.new do |perCache, cacheid|
 	perCache[cacheid] = {}
 end
 
-$stash = SwapDmi::StashCacheLogic::Stash.new(:testme)
-$stash.definePrepare do |cid, ck, data|
-	data + 1
-end
+$stash = SwapDmi::StashCacheLogic::ProgrammableStash.new(:testme)
 $stash.definePut do |cid, ck, data|
 	$backing[cid][ck] = data
 	$timestamps[cid][ck] = Time.now
-end
-$stash.defineParse do |cid, ck, raw|
-	raw - 1
 end
 $stash.defineGet do |cid, ck|
 	$backing[cid][ck]
@@ -55,7 +49,7 @@ $cache.config[:evictTime] = 0
 puts 'test insert/look/evict'
 (1..10).each do |i|
 	$cache[i] = i
-	assertTrue($backing[:tcache][i] == i+1)
+	assertTrue($backing[:tcache][i] == i)
 	assertTrue($cache.has?(i))
 	assertTrue($stash.summary(:tcache).keys.include?(i))
 	assertTrue($cache[i] == i)
