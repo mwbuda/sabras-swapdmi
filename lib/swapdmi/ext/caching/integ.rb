@@ -19,7 +19,7 @@ module SwapDmi
 		extend HasCache
 		
 		def self.defineModelCacheById(cacheId, modelType = self.defaultModelType)
-			self.defineClassDataCaching(modelType, cacheId)
+			self.defineCaching(modelType, cacheId)
 			self
 		end
 		

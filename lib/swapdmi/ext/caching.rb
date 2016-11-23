@@ -357,7 +357,7 @@ module SwapDmi
 		def dataCacherId(instanceId, chalias)
 			ichid = self.instanceDataCaching[instanceId][chalias]
 			return ichid unless ichid.nil?
-			self.classDataCachint[chalias]
+			self.classDataCaching[chalias]
 		end
 		
 		def dataCacher(instanceId, chalias)

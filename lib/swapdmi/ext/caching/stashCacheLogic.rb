@@ -55,6 +55,10 @@ module StashCacheLogic
       self
 		end
 		
+		def onReady()
+		end
+
+
 		def isReady?()
 			@readyFlag
 		end
@@ -64,7 +68,7 @@ module StashCacheLogic
 			begin
 				self.onPut(cid, ck, data)
 			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+				raise SwapDmi::StashCacheLogic::StashUsageError.new(e)
 			end
 			self	
 		end
@@ -74,7 +78,7 @@ module StashCacheLogic
 			begin
 				self.onGet(cid, ck)
 			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+				raise SwapDmi::StashCacheLogic::StashUsageError.new(e)
 			end
 		end
 		
@@ -83,7 +87,7 @@ module StashCacheLogic
 			begin
 				self.onRemove(cid, ck)
 			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+				raise SwapDmi::StashCacheLogic::StashUsageError.new(e)
 			end
 			self
 		end
@@ -94,7 +98,7 @@ module StashCacheLogic
 				res = self.onSummary(cid)
 				res.nil? ? {} : res
 			rescue => e
-				raise SwapDmi::StashCacheLogic::StashUsageError(e)
+				raise SwapDmi::StashCacheLogic::StashUsageError.new(e)
 			end
 		end
 		
