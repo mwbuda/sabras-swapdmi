@@ -32,6 +32,10 @@ bta = SwapDmi.marshal(ta)
 xta1 = SwapDmi.unmarshal(bta)
 xta2 = Marshal::load(bta)
 
+File.binwrite('./tmp', bta)
+xta3 = SwapDmi.unmarshal( File.binread('./tmp') )
+File.delete('./tmp')
+
 assertTrue(xta2.id == ta.id)
 assertTrue(xta2.modelClass == TestA)
 assertTrue(xta2.contextOfUse == :default)
