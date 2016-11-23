@@ -284,6 +284,10 @@ module SwapDmi
       self.instance_exec(ks, &@getMany)
     end
     
+    def getAll()
+    	self.getMany(SwapDmi::CacheKey::Wildcard)
+    end
+    
     def getOne(k)
 			self.ready
 			self.evict(k) if @evictWhen[:get]
