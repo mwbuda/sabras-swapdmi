@@ -163,6 +163,7 @@ module SwapDmi
 			loadMergeDelegates(cfg)
 			#TODO: simple always/never merge impl p/ delegate filters
 			loadBindImpls(cfg)
+			loadPostInit(cfg)
 			
 			Rails.logger.debug('done initializing SwapDmi')
 		end
@@ -233,6 +234,16 @@ module SwapDmi
 				end
 			end
 		end
+		
+		def loadPostInit(cfg)
+			Rails.logger.debug('SwapDmi: run post-init scripts')
+			paths = cfg['swapdmi.postInit'].nil? ? [] : cfg['swapdmi.postInit']
+			paths.each do |path|
+				Rails.logger.debug("SwapDmi:\t--> app/models/postInit/#{path}") 
+				Kernel.require Rails.root.join('app/models/postInit', path)
+			end
+		end
+		
 	end 
 
 end
