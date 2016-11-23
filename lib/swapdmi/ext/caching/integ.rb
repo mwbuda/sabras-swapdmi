@@ -16,26 +16,10 @@ module SwapDmi
 	end
 	
 	class DataSource
+		extend HasCache
 		
-		self.singleton_class.send(:alias_method, :basicInitModelCache, :initModelCache)
-		
-		def self.initModelCache()
-			@cacheIdConfigMapping = {} if @cacheIdConfigMapping.nil?
-			self.basicInitModelCache()
-		end
-		
-		def self.modelCacheIdConfigKey(modelType = self.defaultModelType)
-			self.initModelCache
-			SwapDmi.idValue( @cacheIdConfigMapping[modelType] )
-		end
-		
-		#
-		# map a model type to use a cache identified by contents of the given config property
-		# 	EG: if mapModelCacheId(:monkey, X). objects of type X will use Cache[ self.config[:monkey] ]
-		#
-		def self.mapModelCacheIdToConfig(configKey, modelType = self.defaultModelType)
-			self.initModelCache
-			@cacheIdConfigMapping[modelType] = SwapDmi.idValue(configKey)
+		def self.defineModelCacheById(cacheId, modelType = self.defaultModelType)
+			self.defineClassDataCaching(modelType, cacheId)
 			self
 		end
 		
@@ -44,14 +28,9 @@ module SwapDmi
 				mtype = modelType
 				dsource = self
 				SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dsource.modelCacheIdForType(mtype)
+					dsource.dataCacherId(mtype)
 				end
 			end
-		end
-		
-		def modelCacheIdForType(modelType = self.class.defaultModelType)
-			configKey = self.class.modelCacheIdConfigKey(modelType)
-			SwapDmi.idValue( self.config[configKey] )
 		end
 		
 	end
@@ -64,7 +43,7 @@ module SwapDmi
 				dsource = self
 				
 				proxy = SwapDmi::ProxyObject.new(SwapDmi::Cache) do
-					dsource.modelCacheIdForType(mtype)
+					dsource.dataCacherId(mtype)
 				end
 				
 				proxy.withProxyPreFilter(:[]) do |cache, k|
