@@ -6,24 +6,34 @@
 module SwapDmi
 	SwapDmi.declareExtension(:modelMarshal)
 	
-	def self.marshal(raw)
-		cooked = case raw
+	def self.marshal(raw, &finalizer)
+		if finalizer.nil?
+			finalizer = Proc.new {|x| Marshal::dump(x) }
+		end
+		cooked = self.prepareMarshalData
+		finalizer.call(cooked)
+	end
+	
+	def self.prepareMarshalData(raw)
+		case raw
 			when SwapDmi::Model
 				raw.marshal
 			when Array
 				v2 = []
-				raw.each { |sv| v2 << self.marshal(sv) }
+				raw.each { |sv| v2 << self.prepareMarshalData(sv) }
 				v2
 			when Hash
 				v2 = {}
-				raw.each { |k,sv| v2[k] = self.marshal(sv) }
+				raw.each { |k,sv| v2[k] = self.prepareMarshalData(sv) }
 			else raw 
 		end
-		Marshal::dump(cooked)
 	end
 	
-	def self.unmarshal(marshalled)
-		loaded = Marshal::load(marshalled)
+	def self.unmarshal(marshalled, &reader)
+		if reader.nil?
+			reader = Proc.new {|x| Marshal::load(x) }
+		end
+		loaded = reader.call(marshalled)
 		self.parseMarshalData(loaded)
 	end
 	
