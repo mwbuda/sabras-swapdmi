@@ -57,8 +57,8 @@ module DefaultCacheKeyLogic
 			Proc.new {|a,b| SwapDmi::CacheKey.wildcard?(a)},
 			Proc.new {|a,b| SwapDmi::CacheKey.wildcard?(b)}, 
 			Proc.new {|a,b| a == b},
-			Proc.new {|a,b| a.to_s =~ /#{b.to_s}/i ? true : false},
-			Proc.new {|a,b| b.to_s =~ /#{a.to_s}/i ? true : false},
+			Proc.new {|a,b| a.to_s =~ /^#{b.to_s}$/i ? true : false},
+			Proc.new {|a,b| b.to_s =~ /^#{a.to_s}$/i ? true : false},
 		]
 	
 		matches = conds.map do |cond| 
