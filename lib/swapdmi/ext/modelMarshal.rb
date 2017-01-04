@@ -1,4 +1,6 @@
 
+require 'json'
+
 #
 # implements marshalling integration for data model objects
 #
@@ -6,12 +8,118 @@
 module SwapDmi
 	SwapDmi.declareExtension(:modelMarshal)
 	
-	def self.marshal(raw, &finalizer)
-		if finalizer.nil?
-			finalizer = Proc.new {|x| Marshal::dump(x) }
+	class ModelMarshalFinalizer
+		def self.instance()
+			@instance = self.new if @instance.nil?
+			@instance
 		end
+		def initialize(&b)
+			@block = b
+		end
+		def finalize(x)
+			@block.call(x)
+		end
+	end
+	
+	class ModelMarshalReader
+		def self.instance()
+			@instance = self.new if @instance.nil?
+			@instance
+		end
+		def initialize(&b)
+			@block = b
+		end
+		def read(x)
+			@block.call(x)
+		end
+	end
+	
+	module MarshalMarshalling
+		class Finalizer < SwapDmi::ModelMarshalFinalizer
+			def finalize(x)
+				Marshal::dump(x)
+			end
+		end
+		
+		class Reader < SwapDmi::ModelMarshalReader
+			def read(x)
+				Marshal::load(x)
+			end
+		end
+	end
+	
+	module JsonMarshalling
+		class Finalizer < SwapDmi::ModelMarshalFinalizer
+			def subproc(x)
+				case x
+					when Array
+						v2 = []
+						x.each {|sv| v2 << self.subproc(sv)}
+						v2
+					when Hash
+						v2 = {}
+						x.each {|k,sv| v2[k] = self.subproc(sv)}
+						v2
+					when SwapDmi::PickledModel
+						{
+							'_swapdmi' => true,
+							'id' => x.id, 'mc' => x.modelClassName, 'cxt' => x.contextOfUse,
+							'sx' => self.subproc(x.sundry),
+							'fs' => self.subproc(x.fields),
+						}
+					else
+						x
+				end
+			end
+			
+			def finalize(x)
+				JSON.dump({'data' => self.subproc(x)})
+			end
+		end
+		
+		class Reader < SwapDmi::ModelMarshalReader
+			def parse(x)
+				case x
+					when Array
+						v2 = []
+						x.each {|sv| v2 << self.parse(sv) }
+						v2
+					when Hash then if x['_swapdmi']
+							SwapDmi::PickledModel.new(
+								x['mc'], x['id'], x['cxt'],
+								self.parse(x['fs']),
+								self.parse(x['sx']),
+							)
+					else
+						v2 = {}
+						x.each {|k,sv| v2[k] = self.parse(sv)}
+						v2
+					end
+					else
+						x 
+				end
+			end
+			
+			def read(x)
+				self.parse( JSON.parse(x)['data'] )
+			end
+		end
+	end
+	
+	def self.marshal(raw, fc = nil, &fb)
+		fi =  00
+		fi += 01 if fc.nil?
+		fi += 10 if fb.nil?
+		
+		finalizer = case fi
+			when 00 then fc.new(&fb)
+			when 01 then SwapDmi::ModelMarshalFinalizer.new(&fb)
+			when 10 then fc.instance
+			when 11 then SwapDmi::MarshalMarshalling::Finalizer.instance
+		end
+
 		cooked = self.prepareMarshalData
-		finalizer.call(cooked)
+		finalizer.finalize(cooked)
 	end
 	
 	def self.prepareMarshalData(raw)
@@ -29,11 +137,19 @@ module SwapDmi
 		end
 	end
 	
-	def self.unmarshal(marshalled, &reader)
-		if reader.nil?
-			reader = Proc.new {|x| Marshal::load(x) }
+	def self.unmarshal(marshalled, rc = nil, &rb)
+		ri =  00
+		ri += 01 if rc.nil?
+		ri += 10 if rb.nil?
+		
+		reader = case ri
+			when 00 then rc.new(&rb)
+			when 01 then SwapDmi::ModelMarshalReader.new(&rb)
+			when 10 then rc.instance
+			when 11 then SwapDmi::MarshalMarshalling::Reader.instance
 		end
-		loaded = reader.call(marshalled)
+		
+		loaded = reader.read(marshalled)
 		self.parseMarshalData(loaded)
 	end
 	
@@ -170,13 +286,12 @@ module SwapDmi
 	
 	
 	class PickledModel
-	
 		attr_reader :modelClass, :id, :contextOfUse, :sundry, :fields
 		
 		def initialize(mclass, id, context, fields = {}, sundry = {})
 			@modelClass = mclass.to_s
-			@id = id
-			@contextOfUse = context
+			@id = SwapDmi.idValue(id)
+			@contextOfUse = SwapDmi.idValue(context)
 			
 			@fields = {}
 			@fields.merge!(fields) unless fields.nil?
@@ -184,6 +299,10 @@ module SwapDmi
 			@sundry = {}
 			@sundry.merge!(sundry) unless sundry.nil?
 		end   
+
+		def modelClassName()
+			@modelClass
+		end
 
 		def modelClass()
 			@modelClass.split('::').inject(Object) do |mod, cname|
