@@ -48,7 +48,40 @@ module SwapDmi
 		end
 	end
 	
+	#
+	# In order to distinguish b/w symbols and strings, most text is prefaced with a header code, 
+	# 	consisting of '\c1<xx>\c2' where xx is a 2 digit numeric code indicating data type
+	# For custom objects which do not extend SwapDmi::Model (or, by time in this encoder SwapDmi::PickledModel)
+	# 		this encoding will not take place, 
+	#			as the marshalling does will not know how to introspect the object 
+	# The behavior can be obtained by translating the object to a raw array/hash. 
+	# 	Note that you will probably have to accomodate this anyway, since JSON encoding doesn't handle class type
+	# Note also that this encoding does not take place for PickledModel modelClass, id, & context attribs
+	# 	as we know what those are, and the class's internal id handling eats raw strings nicely
+	#
+	# 	00: string
+	# 	01: symbol
+	#
 	module JsonMarshalling
+		
+		def self.txtenc(t)
+			case t
+				when String then "\c100\c2#{t}"
+				when Symbol then "\c101\c2#{t}"
+				else t
+			end
+		end
+		
+		def self.txtdec(t)
+			return t unless t.is_a? String
+			m = /^\c1(\d\d)\c2(.*)$/ =~ t
+			return t unless m
+			case $1.to_i
+				when 00 then $2
+				when 01 then $2.to_sym
+			end
+		end
+		
 		class Finalizer < SwapDmi::ModelMarshalFinalizer
 			def subproc(x)
 				case x
@@ -58,17 +91,19 @@ module SwapDmi
 						v2
 					when Hash
 						v2 = {}
-						x.each {|k,sv| v2[k] = self.subproc(sv)}
+						x.each do |k,sv| 
+							kx = SwapDmi::JsonMarshalling.txtenc(k)
+							v2[kx] = self.subproc(sv)
+						end
 						v2
 					when SwapDmi::PickledModel
 						{
 							'_swapdmi' => true,
 							'id' => x.id, 'mc' => x.modelClassName, 'cxt' => x.contextOfUse,
-							'sx' => self.subproc(x.sundry),
-							'fs' => self.subproc(x.fields),
+							'sx' => self.subproc(x.sundry), 'fs' => self.subproc(x.fields),
 						}
 					else
-						x
+						SwapDmi::JsonMarshalling.txtenc(x)
 				end
 			end
 			
@@ -92,11 +127,14 @@ module SwapDmi
 							)
 					else
 						v2 = {}
-						x.each {|k,sv| v2[k] = self.parse(sv)}
+						x.each do |rk,sv|
+							k = SwapDmi::JsonMarshalling.txtdec(rk) 
+							v2[k] = self.parse(sv)
+						end
 						v2
 					end
 					else
-						x 
+						SwapDmi::JsonMarshalling.txtdec(x) 
 				end
 			end
 			
