@@ -172,6 +172,29 @@ module SwapDmi
   class CacheReconfigureError < StandardError
   	
   end
+
+	# special implementation of observable pattern for use by SwapDmi caches
+	# 	CacheObservables will be auto tracked by cache when first added,
+	# 	and if object updates then it will be re-saved, ensuring most upto date object is in the cache.
+	# 	as per standard Ruby Observable pattern, programmer will need to notify observers manually
+	# 	
+	# 	note that this does NOT extend or build upon the core Observable module,
+	# 	this was an explicit design decision to avoid 'cross-talk' with other libraries.
+	# 	cacheObservables are checked for explicitly, a cacheObservable can be a normal observable too
+	#
+	# 	note that unlike most swapdmi mixins, this is added using *include* rather than *extend*,
+	# 	parroting the core Observable module
+	#
+	module CacheObservable
+		def addCacheObserver(cache)
+			@cacheObvs = [] if @cacheObvs.nil?
+			@cacheObvs << cache  unless @cacheObvs.include?(cache)
+		end
+		
+		def notifyCacheUpdate(cid = self.id)
+			cache.save(cid, self)
+		end
+	end
   
   class Cache
     extend HasConfig
@@ -271,6 +294,7 @@ module SwapDmi
       
       self.evict(key) if @evictWhen[:save]
       self.instance_exec(key, data, &@save)
+      data.addCacheObserver(self) if data.is_a? SwapDmi::CacheObservable
       self
     end
     def []=(k,d)
