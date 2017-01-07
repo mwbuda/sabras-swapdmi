@@ -187,12 +187,12 @@ module SwapDmi
 	#
 	module CacheObservable
 		def addCacheObserver(cache)
-			@cacheObvs = [] if @cacheObvs.nil?
-			@cacheObvs << cache  unless @cacheObvs.include?(cache)
+			@cacheObservers = [] if @cacheObservers.nil?
+			@cacheObservers << cache  unless @cacheObservers.include?(cache)
 		end
 		
-		def notifyCacheUpdate(cid = self.id)
-			cache.save(cid, self)
+		def notifyCacheUpdate(ck = self.id)
+			@cacheObservers.each {|cache| cache.save(ck, self) }
 		end
 	end
   
