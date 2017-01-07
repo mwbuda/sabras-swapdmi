@@ -210,6 +210,34 @@ module SwapDmi
 	
 	class Model
 		
+		def self.initMarshalExclusions()
+			return unless @marshalExclusions.nil?
+			@marshalExclusions = [:@id, :@contextOfUse]
+			@marshalExcClean = false
+		end
+		
+		def self.excludeMarshalField(field)
+			self.initMarshalExclude
+			cfield = field.to_s.start_with?('@') ? field.to_sym : "@#{field}".to_sym
+			@marshalExclusions << cfield
+			@marshalExcClean = false
+			self
+		end
+		
+		def self.marshalExclusions()
+			self.initMarshalExclusions
+			return @marshalExclusions.dup if @marshalExcClean
+			
+			#tarverse class hierachy to get all excluded fields
+			if self != SwapDmi::Model
+				@marshalExclusions += self.superclass.marshalExclusions
+				@marshalExclusions.uniq!
+			end
+			@marshalExcClean = true
+			
+			@marshalExclusions
+		end
+		
 		def self.unmarshal(pickle)
 			m = self.new(pickle.id, ContextOfUse[pickle.contextOfUse], pickle.sundry)
 			
@@ -227,8 +255,7 @@ module SwapDmi
 		def marshal()
 			fields = {}
 			self.instance_variables.each do |field|
-				next if field == :@contextOfUse
-				next if field == :@id
+				next if self.class.marshalExclusions.include?(field)
 				v = self.instance_variable_get(field)
 				next if self.omitMarshalFieldValue?(v)
 				v = self.marshalFieldValue(v)

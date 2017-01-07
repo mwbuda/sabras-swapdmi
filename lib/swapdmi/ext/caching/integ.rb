@@ -61,5 +61,11 @@ module SwapDmi
 			extend HasLog
 		end
 	end
-		
+	
+	SwapDmi.addHookForExtension('integrate modelMarshal with caching', :caching, :modelMarshal) do
+		class SwapDmi::Model
+			excludeMarshalField(:cacheObservers)
+		end
+	end
+	
 end
