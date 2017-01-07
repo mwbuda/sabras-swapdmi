@@ -217,7 +217,7 @@ module SwapDmi
 		end
 		
 		def self.excludeMarshalField(field)
-			self.initMarshalExclude
+			self.initMarshalExclusions
 			cfield = field.to_s.start_with?('@') ? field.to_sym : "@#{field}".to_sym
 			@marshalExclusions << cfield
 			@marshalExcClean = false

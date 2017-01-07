@@ -63,9 +63,7 @@ module SwapDmi
 	end
 	
 	SwapDmi.addHookForExtension('integrate modelMarshal with caching', :caching, :modelMarshal) do
-		class SwapDmi::Model
-			excludeMarshalField(:cacheObservers)
-		end
+		SwapDmi::Model.excludeMarshalField(:cacheObservers)
 	end
 	
 end
