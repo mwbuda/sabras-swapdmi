@@ -3,6 +3,8 @@ module SwapDmi
 	def self.idValue(rawid)
 		if rawid.class.isSwapDmiId?
 			rawid
+		elsif rawid.is_a? Numeric
+			rawid
 		else
 			rawid.to_s.to_sym
 		end
