@@ -156,7 +156,7 @@ module SwapDmi
 			when 11 then SwapDmi::MarshalMarshalling::Finalizer.instance
 		end
 
-		cooked = self.prepareMarshalData
+		cooked = self.prepareMarshalData(raw)
 		finalizer.finalize(cooked)
 	end
 	
