@@ -64,6 +64,9 @@ module SwapDmi
 	#
 	module JsonMarshalling
 		
+		#TODO: expand to date/time
+		#TODO: expand to complex numbers
+		#TODO expand to struct
 		def self.txtenc(t)
 			case t
 				when String then "\c100\c2#{t}"
