@@ -192,6 +192,7 @@ module SwapDmi
 		end
 		
 		def notifyCacheUpdate(ck = self.id)
+			@cacheObservers = [] if @cacheObservers.nil?
 			@cacheObservers.each {|cache| cache.save(ck, self) }
 		end
 	end
