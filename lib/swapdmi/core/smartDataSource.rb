@@ -69,31 +69,33 @@ module SwapDmi
 		# will NOT store the model in the cache. this must be done explicitly after touching the model instance
 		#
 		def touchModel(id, modelType = self.class.defaultModelType, xsundry = {})
-			return self.modelCache[modelType][id] if self.modelCache[modelType].has_key?(id) 
+			cleanId = SwapDmi.idValue(id)
+			return self.modelCache[modelType][cleanId] if self.modelCache[modelType].has_key?(cleanId) 
 			
 			modelPreInit = self.class.modelPreInit(modelType)
-			params = self.instance_exec(id, &modelPreInit)
+			params = self.instance_exec(cleanId, &modelPreInit)
 			params.merge!(xsundry) unless xsundry.nil?
 			
-			mx = modelType.new(id, self.context, params)
+			mx = modelType.new(cleanId, self.context, params)
 			
 			modelPostInit = self.class.modelPostInit(modelType)
 			self.instance_exec(mx, &modelPostInit) unless modelPostInit.nil?
 			
-			self.modelCache[modelType][id] = mx
+			self.modelCache[modelType][cleanId] = mx
 			
 			mx
 		end		
 		
 		def fetchModel(id, type = self.class.defaultModelType)
+			cleanId = SwapDmi.idValue(id)
 			mcache = self.modelCache[type]
 			throw :unsupportedType if mcache.nil?
 			if self.class.fetchResolvesNil?(type)
-				mcache[id]
-			elsif !mcache.has_key?(id)
+				mcache[cleanId]
+			elsif !mcache.has_key?(cleanId)
 				nil
 			else
-				mcache[id]
+				mcache[cleanId]
 			end
 		end
 		

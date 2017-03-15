@@ -160,7 +160,7 @@ module SwapDmi
 			models.each do |model|
 				mcache = self.modelCache[model.class]
 				throw :unsupportedType if mcache.nil?
-				mcache[model.id] = model
+				mcache[SwapDmi.idValue(model.id)] = model
 			end
 			self
 		end
@@ -175,15 +175,17 @@ module SwapDmi
 		# fetch a model from the cache
 		#	if you are not resolving nil for the type, then will return nil if not previously manually touched/cached
 		def fetchModel(id, type = self.class.defaultModelType)
+			cleanId = SwapDmi.idValue(id)
 			mcache = self.modelCache[type]
 			throw :unsupportedType if mcache.nil?
-			mcache[id]
+			mcache[cleanId]
 		end
 		
 		def hasModel?(id, type = self.class.defaultModelType)
+			cleanId = SwapDmi.idValue(id)
 			mcache = self.modelCache[type]
 			throw :unsupportedType if mcache.nil?
-			return mcache.has_key?(id)
+			return mcache.has_key?(cleanId)
 		end
 		
 		alias :has? :hasModel?
